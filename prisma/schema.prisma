@@ -9,3 +9,71 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  ROLE_SUPER_ADMIN
+  ROLE_SELLER
+  ROLE_AFFILIATE
+  ROLE_SELLER_ADMIN
+}
+
+model UserRole {
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  role Role
+
+  @@id([userId, role], name: "userRole")
+  @@map("user_has_role")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email    String @unique
+  password String
+
+  firstName String?
+  lastName  String?
+
+  seller    Seller?
+  affiliate Affiliate?
+  userRole  UserRole[]
+
+  @@map("user")
+}
+
+model Seller {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  phoneNumber  String
+  active       Boolean @default(false)
+  totalEarning Int?
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  @@map("seller")
+}
+
+model Affiliate {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  phoneNumber     String
+  affiliateCode   String
+  totalEarnings   Int?
+  status          String
+  amountWithdrawn Int?
+  balance         Int?
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  @@map("affiliate")
+}

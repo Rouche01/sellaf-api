@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "UserRole" ALTER COLUMN "role" SET DEFAULT 'ROLE_SUPER_ADMIN';
