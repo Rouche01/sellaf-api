@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  sellaf-api:
+    container_name: 'sellaf-v2-api'
+    image: 'sellaf-v2-api-image'
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    env_file:
+      - ./.env
+    volumes:
+      - ./src:/usr/src/app/src
+    ports:
+      - "4000:4000"
+    depends_on:
+      - dev-db
+  dev-db:
+    image: postgres:13
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: rouche
+      POSTGRES_PASSWORD: rouche
+      POSTGRES_DB: sellaf-dev
