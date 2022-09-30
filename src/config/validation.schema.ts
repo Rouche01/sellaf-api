@@ -6,4 +6,8 @@ export const validationSchema = Joi.object({
   APP_ENVIRONMENT: Joi.string()
     .valid('development', 'production')
     .default('production'),
+  KEYCLOAK_SERVER: Joi.string().required(),
+  KEYCLOAK_SERVER_REALM_NAME: Joi.string().required(),
+  KEYCLOAK_ADMIN_CLIENT_ID: Joi.string().required(),
+  KEYCLOAK_ADMIN_CLIENT_SECRET: Joi.string().required(),
 });
