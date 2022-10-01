@@ -56,6 +56,7 @@ export class KeycloakUserService {
   async createKeycloakUser(
     dto: AffiliateRegisterDto,
     userGroup: Array<UserGroups>,
+    userAttrs: { [key: string]: any },
   ): Promise<void> {
     const createUserUrl = `${this.keycloakServer}/admin/realms/${this.keycloakRealm}/users`;
 
@@ -82,6 +83,7 @@ export class KeycloakUserService {
                 },
               ],
               groups: userGroup,
+              attributes: userAttrs,
             },
             {
               headers: { Authorization: `Bearer ${adminAccessToken}` },
