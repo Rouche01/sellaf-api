@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
@@ -32,8 +33,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  email    String @unique
-  password String
+  email String @unique
 
   firstName String?
   lastName  String?
@@ -67,10 +67,10 @@ model Affiliate {
 
   phoneNumber     String
   affiliateCode   String
-  totalEarnings   Int?
-  status          String
-  amountWithdrawn Int?
-  balance         Int?
+  totalEarnings   Int?    @default(0)
+  amountWithdrawn Int?    @default(0)
+  balance         Int?    @default(0)
+  active          Boolean @default(false)
 
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])

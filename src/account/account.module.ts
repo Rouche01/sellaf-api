@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { AccountController } from './account.controller';
-import { AccountService } from './services';
+import { AccountService, KeycloakUserService } from './services';
 
 @Module({
   controllers: [AccountController],
-  providers: [AccountService],
+  providers: [AccountService, KeycloakUserService],
   imports: [HttpModule],
 })
 export class AccountModule {}

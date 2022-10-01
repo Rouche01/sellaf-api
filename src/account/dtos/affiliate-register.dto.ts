@@ -16,4 +16,8 @@ export class AffiliateRegisterDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phoneNumber: string;
 }

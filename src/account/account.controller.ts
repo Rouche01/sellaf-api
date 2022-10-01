@@ -7,7 +7,11 @@ export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
   @Post('register/affiliate')
-  async register(@Body() dto: AffiliateRegisterDto): Promise<void> {
-    await this.accountService.createKeycloakUser(dto, ['AFFILIATE_USER_GROUP']);
+  async register(
+    @Body() dto: AffiliateRegisterDto,
+  ): Promise<{ userId: number; message: string }> {
+    return this.accountService.createAffiliateUser(dto, [
+      'AFFILIATE_USER_GROUP',
+    ]);
   }
 }
