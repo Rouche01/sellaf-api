@@ -10,4 +10,9 @@ export const validationSchema = Joi.object({
   KEYCLOAK_SERVER_REALM_NAME: Joi.string().required(),
   KEYCLOAK_ADMIN_CLIENT_ID: Joi.string().required(),
   KEYCLOAK_ADMIN_CLIENT_SECRET: Joi.string().required(),
+  SMTP_HOST: Joi.string().required(),
+  SMTP_USERNAME: Joi.string().required(),
+  SMTP_PASSWORD: Joi.string().required(),
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().port().default(6379),
 });

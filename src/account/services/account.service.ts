@@ -1,4 +1,9 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { EmailService } from 'src/email';
 import { UserGroups } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
 import { generateAffiliateId } from 'src/utils';
@@ -10,6 +15,7 @@ export class AccountService {
   constructor(
     private readonly keycloakUserService: KeycloakUserService,
     private readonly prismaService: PrismaService,
+    private readonly emailService: EmailService,
   ) {}
 
   async createAffiliateUser(
@@ -42,6 +48,15 @@ export class AccountService {
             create: [{ role: 'ROLE_AFFILIATE' }],
           },
         },
+      });
+
+      const emailJobResp = await this.emailService.addEmailJob(
+        'Hello World. Testing the mic',
+        dto.email,
+      );
+      Logger.log({
+        emailJobSuccess: !!emailJobResp.failedReason,
+        failedReason: emailJobResp.failedReason,
       });
       return { userId: user.id, message: 'Affiliate created successfully!' };
     } catch (err) {

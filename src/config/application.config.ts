@@ -8,4 +8,9 @@ export const applicationConfig = registerAs('application', () => ({
   keycloakServerRealmName: process.env.KEYCLOAK_SERVER_REALM_NAME,
   keycloakAdminClientId: process.env.KEYCLOAK_ADMIN_CLIENT_ID,
   keycloakAdminClientSecret: process.env.KEYCLOAK_ADMIN_CLIENT_SECRET,
+  smtpHost: process.env.SMTP_HOST,
+  smtpUsername: process.env.SMTP_USERNAME,
+  smtpPassword: process.env.SMTP_PASSWORD,
+  redisHost: process.env.REDIS_HOST,
+  redisPort: process.env.REDIS_PORT,
 }));

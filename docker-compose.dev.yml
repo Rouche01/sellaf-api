@@ -14,6 +14,7 @@ services:
       - 4005:4005
     depends_on:
       - dev-db
+      - redis
     platform: "linux/amd64"
   dev-db:
     image: postgres:13-alpine
@@ -48,5 +49,14 @@ services:
     depends_on:
       - dev-db
     command: start-dev
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command: [ "redis-server", "--appendonly", "yes" ]
+    volumes:
+      - redis:/data
 volumes:
   postgres_data:
+  redis:

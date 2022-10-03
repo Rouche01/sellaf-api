@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AccountModule } from './account';
 import { applicationConfig, validationSchema } from './config';
 import { PrismaModule } from './prisma';
+import { BullBoardModule } from './bull_board';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { PrismaModule } from './prisma';
     }),
     AccountModule,
     PrismaModule,
+    BullBoardModule,
   ],
   controllers: [AppController],
 })
