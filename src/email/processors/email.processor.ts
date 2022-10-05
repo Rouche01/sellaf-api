@@ -1,6 +1,7 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
+import { EmailJobData } from '../interfaces';
 
 @Processor('SEND_EMAIL')
 export class EmailConsumer extends WorkerHost {
@@ -8,14 +9,17 @@ export class EmailConsumer extends WorkerHost {
     super();
   }
 
-  async process(
-    job: Job<{ message: string; emailAddr: string }>,
-  ): Promise<void> {
+  async process(job: Job<EmailJobData>): Promise<void> {
     await this.mailerService.sendMail({
-      from: '"No Reply" <noreply@adverts247.com>',
-      to: job.data.emailAddr,
-      subject: 'Test Email',
-      text: job.data.message,
+      from: '"Sellaf Africa" <noreply@adverts247.com>',
+      to: job.data.recepient,
+      subject: job.data.subject,
+      template: job.data.template,
+      context: {
+        affiliateVerification: {
+          ...job.data.contextObj,
+        },
+      },
     });
   }
 }

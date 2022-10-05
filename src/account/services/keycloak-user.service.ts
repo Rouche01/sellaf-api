@@ -10,7 +10,7 @@ import url from 'url';
 import { applicationConfig } from 'src/config';
 import { AdminAccessTokenResponse, UserGroups } from 'src/interfaces';
 import { AffiliateRegisterDto } from '../dtos';
-import { generateUniqueUsername } from 'src/utils';
+import { generateUniqueUsername } from 'src/account/utils';
 // import { generateUniqueUsername } from 'src/utils';
 
 @Injectable()

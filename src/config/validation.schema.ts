@@ -15,4 +15,5 @@ export const validationSchema = Joi.object({
   SMTP_PASSWORD: Joi.string().required(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().port().default(6379),
+  BCRYPT_TOKEN_SALT: Joi.number().required(),
 });

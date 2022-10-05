@@ -38,9 +38,10 @@ model User {
   firstName String?
   lastName  String?
 
-  seller    Seller?
-  affiliate Affiliate?
-  userRole  UserRole[]
+  seller            Seller?
+  affiliate         Affiliate?
+  userRole          UserRole[]
+  confirmationToken ConfirmationToken[]
 
   @@map("user")
 }
@@ -76,4 +77,18 @@ model Affiliate {
   user   User @relation(fields: [userId], references: [id])
 
   @@map("affiliate")
+}
+
+model ConfirmationToken {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expiresAt DateTime
+  token     String
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  @@map("confirmation_token")
 }

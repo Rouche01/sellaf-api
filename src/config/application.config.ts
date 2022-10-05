@@ -13,4 +13,5 @@ export const applicationConfig = registerAs('application', () => ({
   smtpPassword: process.env.SMTP_PASSWORD,
   redisHost: process.env.REDIS_HOST,
   redisPort: process.env.REDIS_PORT,
+  bcryptTokenSalt: process.env.BCRYPT_TOKEN_SALT,
 }));
