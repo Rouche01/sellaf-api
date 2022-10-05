@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import add from 'date-fns/add';
 import { EmailService } from 'src/email';
 import { UserGroups } from 'src/interfaces';
@@ -13,10 +9,12 @@ import { KeycloakUserService } from './keycloak-user.service';
 import { applicationConfig } from 'src/config';
 import { generateConfirmationToken } from '../utils/generate_confirmation_token.util';
 import { AffiliateRegisterContext } from '../interfaces';
+import { AppLoggerService } from 'src/app_logger';
 
 @Injectable()
 export class AccountService {
   private readonly bcryptTokenSalt: string;
+  private readonly logger = new AppLoggerService(AccountService.name);
 
   constructor(
     private readonly keycloakUserService: KeycloakUserService,
@@ -84,7 +82,7 @@ export class AccountService {
           recepient: dto.email,
           subject: 'Verify your Email',
         });
-      Logger.log({
+      this.logger.log({
         emailJobSuccess: !!emailJobResp.failedReason,
         failedReason: emailJobResp.failedReason,
       });

@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
@@ -11,12 +10,13 @@ import { applicationConfig } from 'src/config';
 import { AdminAccessTokenResponse, UserGroups } from 'src/interfaces';
 import { AffiliateRegisterDto } from '../dtos';
 import { generateUniqueUsername } from 'src/account/utils';
-// import { generateUniqueUsername } from 'src/utils';
+import { AppLoggerService } from 'src/app_logger';
 
 @Injectable()
 export class KeycloakUserService {
   private readonly keycloakServer: string;
   private readonly keycloakRealm: string;
+  private readonly logger = new AppLoggerService(KeycloakUserService.name);
 
   constructor(private readonly httpService: HttpService) {
     this.keycloakServer = applicationConfig().keycloakServer;
@@ -41,10 +41,10 @@ export class KeycloakUserService {
           .pipe(),
       );
 
-      Logger.log('Retrieved admin access token');
+      this.logger.log('Retrieved admin access token');
       return response.data.access_token;
     } catch (err) {
-      Logger.error(err?.response?.data?.error_description || err?.message);
+      this.logger.error(err?.response?.data?.error_description || err?.message);
       throw new InternalServerErrorException(
         err?.response?.data?.error_description ||
           err?.message ||
@@ -92,7 +92,7 @@ export class KeycloakUserService {
           .pipe(),
       );
     } catch (err) {
-      Logger.error(
+      this.logger.error(
         err?.response?.data?.error ||
           err?.response?.data?.errorMessage ||
           err.message,
