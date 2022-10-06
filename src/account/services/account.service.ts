@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -20,19 +21,19 @@ import { generateConfirmationToken, verifyConfirmationToken } from '../utils';
 import { AffiliateRegisterContext } from '../interfaces';
 import { AppLoggerService } from 'src/app_logger';
 import { LoginResponse } from '../interfaces/login_response.interface';
+import { ConfigType } from '@nestjs/config';
 
 @Injectable()
 export class AccountService {
-  private readonly bcryptTokenSalt: string;
   private readonly logger = new AppLoggerService(AccountService.name);
 
   constructor(
     private readonly keycloakUserService: KeycloakUserService,
     private readonly prismaService: PrismaService,
     private readonly emailService: EmailService,
-  ) {
-    this.bcryptTokenSalt = applicationConfig().bcryptTokenSalt;
-  }
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
+  ) {}
 
   async createAffiliateUser(
     dto: AffiliateRegisterDto,
@@ -44,7 +45,7 @@ export class AccountService {
       lastName: dto.lastName,
     });
     const confirmationToken = await generateConfirmationToken(
-      +this.bcryptTokenSalt,
+      +this.appConfig.bcryptTokenSalt,
     );
 
     const keycloakAttrs = {

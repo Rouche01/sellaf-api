@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
@@ -11,27 +12,23 @@ import { KeycloakUserLoginResponse, UserGroups } from '../interfaces';
 import { AdminAccessTokenResponse } from '../interfaces';
 import { AffiliateRegisterDto } from '../dtos';
 import { AppLoggerService } from 'src/app_logger';
+import { ConfigType } from '@nestjs/config';
 
 @Injectable()
 export class KeycloakUserService {
-  private readonly keycloakServer: string;
-  private readonly keycloakRealm: string;
-  private readonly kcSellafApiClientId: string;
-  private readonly kcSellafApiClientSecret: string;
   private readonly logger = new AppLoggerService(KeycloakUserService.name);
 
-  constructor(private readonly httpService: HttpService) {
-    this.keycloakServer = applicationConfig().keycloakServer;
-    this.keycloakRealm = applicationConfig().keycloakServerRealmName;
-    this.kcSellafApiClientId = applicationConfig().kcSellafApiClientId;
-    this.kcSellafApiClientSecret = applicationConfig().kcSellafApiClientSecret;
-  }
+  constructor(
+    private readonly httpService: HttpService,
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
+  ) {}
 
   private async getKeycloakAdminAccessToken(): Promise<string> {
     const clientId = applicationConfig().keycloakAdminClientId;
     const clientSecret = applicationConfig().keycloakAdminClientSecret;
 
-    const tokenUrl = `${this.keycloakServer}/realms/master/protocol/openid-connect/token`;
+    const tokenUrl = `${this.appConfig.keycloakServer}/realms/master/protocol/openid-connect/token`;
     const params = new url.URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
@@ -63,7 +60,7 @@ export class KeycloakUserService {
     userGroup: Array<UserGroups>,
     userAttrs: { [key: string]: any },
   ): Promise<void> {
-    const createUserUrl = `${this.keycloakServer}/admin/realms/${this.keycloakRealm}/users`;
+    const createUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users`;
 
     const adminAccessToken = await this.getKeycloakAdminAccessToken();
     try {
@@ -110,12 +107,12 @@ export class KeycloakUserService {
   }
 
   async loginKeycloakUser(username: string, password: string) {
-    const loginUrl = `${this.keycloakServer}/realms/Sellaf/protocol/openid-connect/token`;
+    const loginUrl = `${this.appConfig.keycloakServer}/realms/Sellaf/protocol/openid-connect/token`;
     const params = new url.URLSearchParams({
       username,
       password,
-      client_secret: this.kcSellafApiClientSecret,
-      client_id: this.kcSellafApiClientId,
+      client_secret: this.appConfig.kcSellafApiClientSecret,
+      client_id: this.appConfig.kcSellafApiClientId,
       grant_type: 'password',
     });
 
@@ -137,6 +134,6 @@ export class KeycloakUserService {
   }
 
   async updateKeycloakUser(userId: string) {
-    const updateUserUrl = `${this.keycloakServer}/admin/realms/${this.keycloakRealm}/users/${userId}`;
+    const updateUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users/${userId}`;
   }
 }

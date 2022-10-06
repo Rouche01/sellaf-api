@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Get, Query } from '@nestjs/common';
+import { Public } from 'nest-keycloak-connect';
 import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
@@ -11,6 +12,7 @@ import { AccountService } from './services';
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
+  @Public()
   @Post('affiliate/register')
   async register(
     @Body() dto: AffiliateRegisterDto,
@@ -26,6 +28,7 @@ export class AccountController {
     return this.accountService.verifyAccount(query);
   }
 
+  @Public()
   @Post('/login')
   async login(@Body() dto: LoginDto): Promise<LoginResponse> {
     return this.accountService.login(dto);

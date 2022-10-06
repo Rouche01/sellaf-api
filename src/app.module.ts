@@ -6,6 +6,9 @@ import { applicationConfig, validationSchema } from './config';
 import { PrismaModule } from './prisma';
 import { BullBoardModule } from './bull_board';
 import { AppLoggerMiddleware, AppLoggerModule } from './app_logger';
+import { AuthGuard, KeycloakConnectModule } from 'nest-keycloak-connect';
+import { KeycloakAuthModule, KeycloakAuthService } from './keycloak_auth';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -14,12 +17,22 @@ import { AppLoggerMiddleware, AppLoggerModule } from './app_logger';
       load: [applicationConfig],
       validationSchema,
     }),
+    KeycloakConnectModule.registerAsync({
+      useExisting: KeycloakAuthService,
+      imports: [KeycloakAuthModule],
+    }),
     AccountModule,
     PrismaModule,
     BullBoardModule,
     AppLoggerModule,
   ],
   controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
