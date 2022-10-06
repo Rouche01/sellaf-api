@@ -1,15 +1,25 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import add from 'date-fns/add';
+import compareAsc from 'date-fns/compareAsc';
 import { EmailService } from 'src/email';
-import { UserGroups } from 'src/interfaces';
+import { UserGroups } from '../interfaces';
 import { PrismaService } from 'src/prisma';
-import { generateAffiliateId } from 'src/account/utils';
-import { AffiliateRegisterDto } from '../dtos';
+import { generateAffiliateId, generateUniqueUsername } from 'src/account/utils';
+import {
+  AffiliateRegisterDto,
+  AffiliateVerifyQueryDto,
+  LoginDto,
+} from '../dtos';
 import { KeycloakUserService } from './keycloak-user.service';
 import { applicationConfig } from 'src/config';
-import { generateConfirmationToken } from '../utils/generate_confirmation_token.util';
+import { generateConfirmationToken, verifyConfirmationToken } from '../utils';
 import { AffiliateRegisterContext } from '../interfaces';
 import { AppLoggerService } from 'src/app_logger';
+import { LoginResponse } from '../interfaces/login_response.interface';
 
 @Injectable()
 export class AccountService {
@@ -29,9 +39,14 @@ export class AccountService {
     userGroup: Array<UserGroups>,
   ): Promise<{ userId: number; message: string }> {
     const affiliateId = generateAffiliateId();
+    const username = generateUniqueUsername({
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+    });
     const confirmationToken = await generateConfirmationToken(
       +this.bcryptTokenSalt,
     );
+
     const keycloakAttrs = {
       affiliateId: [affiliateId],
       phoneNumber: [dto.phoneNumber],
@@ -39,6 +54,7 @@ export class AccountService {
 
     await this.keycloakUserService.createKeycloakUser(
       dto,
+      username,
       userGroup,
       keycloakAttrs,
     );
@@ -48,6 +64,7 @@ export class AccountService {
           email: dto.email,
           firstName: dto.firstName,
           lastName: dto.lastName,
+          username,
           affiliate: {
             create: {
               phoneNumber: dto.phoneNumber,
@@ -69,7 +86,6 @@ export class AccountService {
       const verificationLink = encodeURI(
         `http://localhost:4005/api/account/affiliate/verify?token=${confirmationToken}&email=${dto.email}`,
       );
-      console.log(verificationLink);
 
       const emailJobResp =
         await this.emailService.addEmailJob<AffiliateRegisterContext>({
@@ -92,5 +108,54 @@ export class AccountService {
         err?.message || 'Something went wrong with creating an affiliate',
       );
     }
+  }
+
+  async verifyAccount(verifyParams: AffiliateVerifyQueryDto) {
+    const { token, email } = verifyParams;
+    const confirmationToken =
+      await this.prismaService.confirmationToken.findFirst({
+        where: { user: { email } },
+      });
+
+    if (!confirmationToken) {
+      throw new BadRequestException(
+        'Verification link is not correct, request for a new one',
+      );
+    }
+
+    // compareInt is -1 when the current date is greater than the token expiry date
+    const compareInt = compareAsc(confirmationToken.expiresAt, new Date());
+
+    if (compareInt === -1) {
+      throw new BadRequestException(
+        'Verification link is expired, request for a new one',
+      );
+    }
+
+    const tokenIsValid = await verifyConfirmationToken(
+      token,
+      confirmationToken.token,
+    );
+
+    if (!tokenIsValid) {
+      throw new BadRequestException(
+        'Verification link is invalid, request for a new one',
+      );
+    }
+    return 'verify';
+  }
+
+  async login(dto: LoginDto): Promise<LoginResponse> {
+    const user = await this.prismaService.user.findUnique({
+      where: { email: dto.email },
+    });
+    const kcLoginResp = await this.keycloakUserService.loginKeycloakUser(
+      user.username,
+      dto.password,
+    );
+    return {
+      accessToken: kcLoginResp.access_token,
+      refreshToken: kcLoginResp.refresh_token,
+    };
   }
 }

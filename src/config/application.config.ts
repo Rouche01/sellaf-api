@@ -14,4 +14,6 @@ export const applicationConfig = registerAs('application', () => ({
   redisHost: process.env.REDIS_HOST,
   redisPort: process.env.REDIS_PORT,
   bcryptTokenSalt: process.env.BCRYPT_TOKEN_SALT,
+  kcSellafApiClientId: process.env.KC_SELLAF_API_CLIENT_ID,
+  kcSellafApiClientSecret: process.env.KC_SELLAF_API_CLIENT_SECRET,
 }));

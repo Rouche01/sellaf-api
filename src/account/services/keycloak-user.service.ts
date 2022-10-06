@@ -7,20 +7,24 @@ import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import url from 'url';
 import { applicationConfig } from 'src/config';
-import { AdminAccessTokenResponse, UserGroups } from 'src/interfaces';
+import { KeycloakUserLoginResponse, UserGroups } from '../interfaces';
+import { AdminAccessTokenResponse } from '../interfaces';
 import { AffiliateRegisterDto } from '../dtos';
-import { generateUniqueUsername } from 'src/account/utils';
 import { AppLoggerService } from 'src/app_logger';
 
 @Injectable()
 export class KeycloakUserService {
   private readonly keycloakServer: string;
   private readonly keycloakRealm: string;
+  private readonly kcSellafApiClientId: string;
+  private readonly kcSellafApiClientSecret: string;
   private readonly logger = new AppLoggerService(KeycloakUserService.name);
 
   constructor(private readonly httpService: HttpService) {
     this.keycloakServer = applicationConfig().keycloakServer;
     this.keycloakRealm = applicationConfig().keycloakServerRealmName;
+    this.kcSellafApiClientId = applicationConfig().kcSellafApiClientId;
+    this.kcSellafApiClientSecret = applicationConfig().kcSellafApiClientSecret;
   }
 
   private async getKeycloakAdminAccessToken(): Promise<string> {
@@ -55,6 +59,7 @@ export class KeycloakUserService {
 
   async createKeycloakUser(
     dto: AffiliateRegisterDto,
+    username: string,
     userGroup: Array<UserGroups>,
     userAttrs: { [key: string]: any },
   ): Promise<void> {
@@ -71,10 +76,7 @@ export class KeycloakUserService {
               firstName: dto.firstName,
               lastName: dto.lastName,
               enabled: true,
-              username: generateUniqueUsername({
-                firstName: dto.firstName,
-                lastName: dto.lastName,
-              }),
+              username,
               credentials: [
                 {
                   type: 'password',
@@ -105,5 +107,36 @@ export class KeycloakUserService {
       }
       throw new InternalServerErrorException(err.message);
     }
+  }
+
+  async loginKeycloakUser(username: string, password: string) {
+    const loginUrl = `${this.keycloakServer}/realms/Sellaf/protocol/openid-connect/token`;
+    const params = new url.URLSearchParams({
+      username,
+      password,
+      client_secret: this.kcSellafApiClientSecret,
+      client_id: this.kcSellafApiClientId,
+      grant_type: 'password',
+    });
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .post<KeycloakUserLoginResponse>(loginUrl, params.toString())
+          .pipe(),
+      );
+
+      this.logger.log(`${username} logged into keycloak auth server`);
+      return response.data;
+    } catch (err) {
+      this.logger.error(err?.message);
+      throw new InternalServerErrorException(
+        err?.message || 'Unable to log user in auth server',
+      );
+    }
+  }
+
+  async updateKeycloakUser(userId: string) {
+    const updateUserUrl = `${this.keycloakServer}/admin/realms/${this.keycloakRealm}/users/${userId}`;
   }
 }

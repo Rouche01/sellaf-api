@@ -13,3 +13,10 @@ export const generateConfirmationToken = (
 ): Promise<string> => {
   return bcrypt.hash(generateRandomToken(), tokenSalt);
 };
+
+export const verifyConfirmationToken = (
+  data: string,
+  encrypted: string,
+): Promise<boolean> => {
+  return bcrypt.compare(data, encrypted);
+};

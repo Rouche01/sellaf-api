@@ -16,4 +16,6 @@ export const validationSchema = Joi.object({
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().port().default(6379),
   BCRYPT_TOKEN_SALT: Joi.number().required(),
+  KC_SELLAF_API_CLIENT_ID: Joi.string().required(),
+  KC_SELLAF_API_CLIENT_SECRET: Joi.string().required(),
 });

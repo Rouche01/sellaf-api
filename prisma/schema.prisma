@@ -35,8 +35,10 @@ model User {
 
   email String @unique
 
-  firstName String?
-  lastName  String?
+  firstName      String
+  lastName       String?
+  username       String
+  keycloakUserId String?
 
   seller            Seller?
   affiliate         Affiliate?
