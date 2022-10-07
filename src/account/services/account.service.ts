@@ -14,7 +14,7 @@ import {
   AffiliateVerifyQueryDto,
   LoginDto,
 } from '../dtos';
-import { KeycloakUserService } from './keycloak-user.service';
+import { KeycloakUserService } from './keycloak_user.service';
 import { applicationConfig } from 'src/config';
 import {
   generateConfirmationToken,
@@ -33,9 +33,9 @@ export class AccountService {
   constructor(
     private readonly keycloakUserService: KeycloakUserService,
     private readonly prismaService: PrismaService,
-    private readonly emailService: EmailService,
     @Inject(applicationConfig.KEY)
     private readonly appConfig: ConfigType<typeof applicationConfig>,
+    private readonly emailService?: EmailService,
   ) {}
 
   async createAffiliateUser(
@@ -59,12 +59,12 @@ export class AccountService {
       phoneNumber: [dto.phoneNumber],
     };
 
-    const kcUserId = await this.keycloakUserService.createKeycloakUser(
-      dto,
-      username,
+    const kcUserId = await this.keycloakUserService.createKeycloakUser({
+      userData: dto,
       userGroup,
-      keycloakAttrs,
-    );
+      username,
+      userAttrs: keycloakAttrs,
+    });
     try {
       const user = await this.prismaService.user.create({
         data: {
@@ -115,6 +115,48 @@ export class AccountService {
       throw new InternalServerErrorException(
         err?.message || 'Something went wrong with creating an affiliate',
       );
+    }
+  }
+
+  async createPlatformManager(
+    username: string,
+    email: string,
+    password: string,
+  ) {
+    try {
+      const kcUserId = await this.keycloakUserService.createKeycloakUser({
+        userData: {
+          email,
+          password,
+          firstName: 'Super',
+          lastName: 'Admin',
+        },
+        username,
+        userGroup: ['SUPER_ADMIN_USER_GROUP'],
+        emailVerified: true,
+      });
+
+      await this.prismaService.user.create({
+        data: {
+          email,
+          firstName: 'Super',
+          lastName: 'Admin',
+          keycloakUserId: kcUserId,
+          username,
+          userRole: {
+            create: [
+              { role: 'ROLE_SUPER_ADMIN' },
+              { role: 'ROLE_SELLER' },
+              { role: 'ROLE_SELLER_ADMIN' },
+            ],
+          },
+        },
+      });
+    } catch (err) {
+      this.logger.error(
+        err?.message || 'Unable to create platform manager account',
+      );
+      throw new Error('Unable to create platform manager account');
     }
   }
 

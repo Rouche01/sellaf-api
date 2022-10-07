@@ -9,6 +9,7 @@ import { AppLoggerMiddleware, AppLoggerModule } from './app_logger';
 import { AuthGuard, KeycloakConnectModule } from 'nest-keycloak-connect';
 import { KeycloakAuthModule, KeycloakAuthService } from './keycloak_auth';
 import { APP_GUARD } from '@nestjs/core';
+import { PlatformSetupModule } from './platform_setup';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { APP_GUARD } from '@nestjs/core';
     PrismaModule,
     BullBoardModule,
     AppLoggerModule,
+    PlatformSetupModule,
   ],
   controllers: [AppController],
   providers: [

@@ -18,4 +18,7 @@ export const validationSchema = Joi.object({
   BCRYPT_TOKEN_SALT: Joi.number().required(),
   KC_SELLAF_API_CLIENT_ID: Joi.string().required(),
   KC_SELLAF_API_CLIENT_SECRET: Joi.string().required(),
+  ADMIN_USERNAME: Joi.string().required(),
+  ADMIN_EMAIL: Joi.string().required(),
+  ADMIN_PASSWORD: Joi.string().required(),
 });

@@ -9,12 +9,11 @@ import { lastValueFrom } from 'rxjs';
 import url from 'url';
 import { applicationConfig } from 'src/config';
 import {
+  CreateKeycloakUser,
   KeycloakUserLoginResponse,
   UpdateKeycloakUserPayload,
-  UserGroups,
 } from '../interfaces';
 import { AdminAccessTokenResponse } from '../interfaces';
-import { AffiliateRegisterDto } from '../dtos';
 import { AppLoggerService } from 'src/app_logger';
 import { ConfigType } from '@nestjs/config';
 
@@ -58,12 +57,13 @@ export class KeycloakUserService {
     }
   }
 
-  async createKeycloakUser(
-    dto: AffiliateRegisterDto,
-    username: string,
-    userGroup: Array<UserGroups>,
-    userAttrs: { [key: string]: any },
-  ): Promise<string> {
+  async createKeycloakUser({
+    userData,
+    username,
+    userGroup,
+    emailVerified = false,
+    userAttrs,
+  }: CreateKeycloakUser): Promise<string> {
     const createUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users`;
 
     const adminAccessToken = await this.getKeycloakAdminAccessToken();
@@ -73,20 +73,21 @@ export class KeycloakUserService {
           .post(
             createUserUrl,
             {
-              email: dto.email,
-              firstName: dto.firstName,
-              lastName: dto.lastName,
+              email: userData.email,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
               enabled: true,
+              emailVerified,
               username,
               credentials: [
                 {
                   type: 'password',
-                  value: dto.password,
+                  value: userData.password,
                   temporary: false,
                 },
               ],
               groups: userGroup,
-              attributes: userAttrs,
+              ...(userAttrs && { attributes: userAttrs }),
             },
             {
               headers: { Authorization: `Bearer ${adminAccessToken}` },

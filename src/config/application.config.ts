@@ -16,4 +16,7 @@ export const applicationConfig = registerAs('application', () => ({
   bcryptTokenSalt: process.env.BCRYPT_TOKEN_SALT,
   kcSellafApiClientId: process.env.KC_SELLAF_API_CLIENT_ID,
   kcSellafApiClientSecret: process.env.KC_SELLAF_API_CLIENT_SECRET,
+  adminUsername: process.env.ADMIN_USERNAME,
+  adminEmail: process.env.ADMIN_EMAIL,
+  adminPassword: process.env.ADMIN_PASSWORD,
 }));
