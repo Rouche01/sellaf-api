@@ -8,7 +8,11 @@ import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import url from 'url';
 import { applicationConfig } from 'src/config';
-import { KeycloakUserLoginResponse, UserGroups } from '../interfaces';
+import {
+  KeycloakUserLoginResponse,
+  UpdateKeycloakUserPayload,
+  UserGroups,
+} from '../interfaces';
 import { AdminAccessTokenResponse } from '../interfaces';
 import { AffiliateRegisterDto } from '../dtos';
 import { AppLoggerService } from 'src/app_logger';
@@ -59,12 +63,12 @@ export class KeycloakUserService {
     username: string,
     userGroup: Array<UserGroups>,
     userAttrs: { [key: string]: any },
-  ): Promise<void> {
+  ): Promise<string> {
     const createUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users`;
 
     const adminAccessToken = await this.getKeycloakAdminAccessToken();
     try {
-      await lastValueFrom(
+      const response = await lastValueFrom(
         this.httpService
           .post(
             createUserUrl,
@@ -90,6 +94,12 @@ export class KeycloakUserService {
           )
           .pipe(),
       );
+
+      const locationHeaderVal = response.headers['location'];
+      const locationSplits = locationHeaderVal.split('/');
+      const kcUserId = locationSplits[locationSplits.length - 1];
+
+      return kcUserId;
     } catch (err) {
       this.logger.error(
         err?.response?.data?.error ||
@@ -133,7 +143,28 @@ export class KeycloakUserService {
     }
   }
 
-  async updateKeycloakUser(userId: string) {
+  async updateKeycloakUser(
+    userId: string,
+    updatePayload: UpdateKeycloakUserPayload,
+  ) {
     const updateUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users/${userId}`;
+    const adminAccessToken = await this.getKeycloakAdminAccessToken();
+
+    try {
+      await lastValueFrom(
+        this.httpService
+          .put(updateUserUrl, updatePayload, {
+            headers: { Authorization: `Bearer ${adminAccessToken}` },
+          })
+          .pipe(),
+      );
+
+      this.logger.log(`Updated user ${userId}`);
+    } catch (err) {
+      this.logger.log(err?.message);
+      throw new InternalServerErrorException(
+        err?.message || 'Unable to update keycloak user',
+      );
+    }
   }
 }

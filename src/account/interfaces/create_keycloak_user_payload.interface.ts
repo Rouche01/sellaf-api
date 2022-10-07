@@ -1,10 +1,5 @@
+import { CredentialRep } from './credential_rep.interface';
 import { UserGroups } from './user_groups.interface';
-
-interface CredentialRep {
-  type: string;
-  temporary: boolean;
-  value: string;
-}
 
 export interface CreateKeycloakUserPayload {
   email: string;

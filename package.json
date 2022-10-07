@@ -9,6 +9,7 @@
     "prebuild": "rimraf dist",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "cleardb": "export $(cat .env.local | xargs) && node dist/scripts/drop_db",
     "start": "nest start",
     "prisma:studio": "export $(cat .env.local | xargs) && npx prisma studio",
     "prisma:migrate:dev": "export $(cat .env.local | xargs) && npx prisma migrate dev",

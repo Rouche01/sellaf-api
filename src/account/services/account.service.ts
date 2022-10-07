@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -17,7 +16,11 @@ import {
 } from '../dtos';
 import { KeycloakUserService } from './keycloak-user.service';
 import { applicationConfig } from 'src/config';
-import { generateConfirmationToken, verifyConfirmationToken } from '../utils';
+import {
+  generateConfirmationToken,
+  verifyConfirmationToken,
+  encryptToken,
+} from '../utils';
 import { AffiliateRegisterContext } from '../interfaces';
 import { AppLoggerService } from 'src/app_logger';
 import { LoginResponse } from '../interfaces/login_response.interface';
@@ -44,8 +47,11 @@ export class AccountService {
       firstName: dto.firstName,
       lastName: dto.lastName,
     });
-    const confirmationToken = await generateConfirmationToken(
+
+    const confirmationToken = await generateConfirmationToken();
+    const encryptedToken = await encryptToken(
       +this.appConfig.bcryptTokenSalt,
+      confirmationToken,
     );
 
     const keycloakAttrs = {
@@ -53,7 +59,7 @@ export class AccountService {
       phoneNumber: [dto.phoneNumber],
     };
 
-    await this.keycloakUserService.createKeycloakUser(
+    const kcUserId = await this.keycloakUserService.createKeycloakUser(
       dto,
       username,
       userGroup,
@@ -66,6 +72,7 @@ export class AccountService {
           firstName: dto.firstName,
           lastName: dto.lastName,
           username,
+          keycloakUserId: kcUserId,
           affiliate: {
             create: {
               phoneNumber: dto.phoneNumber,
@@ -78,7 +85,7 @@ export class AccountService {
           confirmationToken: {
             create: {
               expiresAt: add(new Date(), { hours: 24 }),
-              token: confirmationToken,
+              token: encryptedToken,
             },
           },
         },
@@ -113,37 +120,76 @@ export class AccountService {
 
   async verifyAccount(verifyParams: AffiliateVerifyQueryDto) {
     const { token, email } = verifyParams;
-    const confirmationToken =
-      await this.prismaService.confirmationToken.findFirst({
-        where: { user: { email } },
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { email },
+        include: { affiliate: true },
       });
 
-    if (!confirmationToken) {
-      throw new BadRequestException(
-        'Verification link is not correct, request for a new one',
+      if (user.affiliate.active) {
+        return {
+          message: 'Email already verified',
+          status: 'success',
+        };
+      }
+
+      const confirmationToken =
+        await this.prismaService.confirmationToken.findFirst({
+          where: { user: { email } },
+        });
+
+      if (!confirmationToken) {
+        return {
+          message: 'Verification link is not correct, request for a new one',
+          status: 'failed',
+        };
+      }
+
+      // compareInt is -1 when the current date is greater than the token expiry date
+      const compareInt = compareAsc(confirmationToken.expiresAt, new Date());
+
+      if (compareInt === -1) {
+        return {
+          message: 'Verification link is expired, request for a new one',
+          status: 'failed',
+        };
+      }
+
+      const tokenIsValid = await verifyConfirmationToken(
+        token,
+        confirmationToken.token,
       );
+
+      if (!tokenIsValid) {
+        return {
+          message: 'Verification link is invalid, request for a new one',
+          status: 'failed',
+        };
+      }
+
+      await this.keycloakUserService.updateKeycloakUser(user.keycloakUserId, {
+        emailVerified: true,
+      });
+      await this.prismaService.affiliate.update({
+        where: { userId: user.id },
+        data: { active: true },
+      });
+      return {
+        message: 'Email verified successfully',
+        status: 'success',
+      };
+    } catch (err) {
+      this.logger.error(err?.message);
+      return {
+        message:
+          err?.message ||
+          'Something went wrong with the verification, resend verfication link',
+        status: 'failed',
+      };
+      // throw new InternalServerErrorException(
+      //   err?.message || 'Something went wrong with email verification',
+      // );
     }
-
-    // compareInt is -1 when the current date is greater than the token expiry date
-    const compareInt = compareAsc(confirmationToken.expiresAt, new Date());
-
-    if (compareInt === -1) {
-      throw new BadRequestException(
-        'Verification link is expired, request for a new one',
-      );
-    }
-
-    const tokenIsValid = await verifyConfirmationToken(
-      token,
-      confirmationToken.token,
-    );
-
-    if (!tokenIsValid) {
-      throw new BadRequestException(
-        'Verification link is invalid, request for a new one',
-      );
-    }
-    return 'verify';
   }
 
   async login(dto: LoginDto): Promise<LoginResponse> {

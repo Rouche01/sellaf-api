@@ -1,4 +1,5 @@
-import { Body, Controller, Post, Get, Query } from '@nestjs/common';
+import { Body, Controller, Post, Get, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { Public } from 'nest-keycloak-connect';
 import {
   AffiliateRegisterDto,
@@ -22,10 +23,15 @@ export class AccountController {
     ]);
   }
 
+  @Public()
   @Get('/affiliate/verify')
-  async verifyAffiliateEmail(@Query() query: AffiliateVerifyQueryDto) {
-    console.log(query.token, query.email);
-    return this.accountService.verifyAccount(query);
+  async verifyAffiliateEmail(
+    @Query() query: AffiliateVerifyQueryDto,
+    @Res() res: Response,
+  ) {
+    const { message, status } = await this.accountService.verifyAccount(query);
+    // TO-DO: replace the base url to the user dashboard
+    res.redirect(`http://localhost:3000?message=${message}&status=${status}`);
   }
 
   @Public()
