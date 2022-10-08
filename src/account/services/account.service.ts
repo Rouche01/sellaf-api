@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -322,6 +323,9 @@ export class AccountService {
     const user = await this.prismaService.user.findUnique({
       where: { email: dto.email },
     });
+    if (!user) {
+      throw new BadRequestException('Wrong email or password');
+    }
     const kcLoginResp = await this.keycloakUserService.loginKeycloakUser(
       user.username,
       dto.password,

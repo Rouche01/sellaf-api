@@ -18,6 +18,13 @@ enum Role {
   ROLE_SELLER_ADMIN
 }
 
+enum Currency {
+  NGN
+  GHS
+  KES
+  RWF
+}
+
 model UserRole {
   userId Int
   user   User @relation(fields: [userId], references: [id])
@@ -57,10 +64,11 @@ model Seller {
   active       Boolean @default(false)
   businessName String
   address      String
-  totalEarning Int?
+  totalEarning Decimal @default(0) @db.Decimal(25, 2)
 
-  userId Int  @unique
-  user   User @relation(fields: [userId], references: [id])
+  userId Int     @unique
+  user   User    @relation(fields: [userId], references: [id])
+  stores Store[]
 
   @@map("seller")
 }
@@ -72,9 +80,9 @@ model Affiliate {
 
   phoneNumber     String
   affiliateCode   String
-  totalEarnings   Int?    @default(0)
-  amountWithdrawn Int?    @default(0)
-  balance         Int?    @default(0)
+  totalEarnings   Decimal @default(0) @db.Decimal(25, 2)
+  amountWithdrawn Decimal @default(0) @db.Decimal(25, 2)
+  balance         Decimal @default(0) @db.Decimal(25, 2)
   active          Boolean @default(false)
 
   userId Int  @unique
@@ -95,4 +103,34 @@ model ConfirmationToken {
   user   User @relation(fields: [userId], references: [id])
 
   @@map("confirmation_token")
+}
+
+model Store {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name            String   @unique
+  bankName        String?
+  accountNumber   String?
+  bankCode        String?
+  currency        Currency @default(NGN)
+  totalEarning    Decimal  @default(0) @db.Decimal(25, 2)
+  amountWithdrawn Decimal  @default(0) @db.Decimal(25, 2)
+  balance         Decimal  @default(0) @db.Decimal(25, 2)
+
+  sellerId Int
+  owner    Seller    @relation(fields: [sellerId], references: [id])
+  products Product[]
+}
+
+model Product {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name String
+
+  storeId Int
+  store   Store @relation(fields: [storeId], references: [id])
 }

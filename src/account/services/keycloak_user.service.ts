@@ -137,10 +137,11 @@ export class KeycloakUserService {
       this.logger.log(`${username} logged into keycloak auth server`);
       return response.data;
     } catch (err) {
-      this.logger.error(err?.message);
-      throw new InternalServerErrorException(
-        err?.message || 'Unable to log user in auth server',
-      );
+      this.logger.error(err?.response?.data || err?.message);
+      if (err?.response?.data?.error_description) {
+        throw new BadRequestException(err.response.data.error_description);
+      }
+      throw new InternalServerErrorException(err?.message);
     }
   }
 
@@ -162,7 +163,7 @@ export class KeycloakUserService {
 
       this.logger.log(`Updated user ${userId}`);
     } catch (err) {
-      this.logger.log(err?.message);
+      this.logger.log(err?.response?.data || err?.message);
       throw new InternalServerErrorException(
         err?.message || 'Unable to update keycloak user',
       );
