@@ -1,4 +1,5 @@
 export { AffiliateRegisterContext } from './affiliate_register_context.interface';
+export { SellerConfirmationContext } from './seller_confirmation_context.interface';
 export { AdminAccessTokenResponse } from './admin_access_token_response.interface';
 export { KeycloakUserLoginResponse } from './keycloak_user_login_response.interface';
 export { KeycloakUserData } from './keycloak_user_data.interface';

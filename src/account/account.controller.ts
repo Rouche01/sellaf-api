@@ -1,10 +1,11 @@
 import { Body, Controller, Post, Get, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { Public } from 'nest-keycloak-connect';
+import { Public, RoleMatchingMode, Roles } from 'nest-keycloak-connect';
 import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
   LoginDto,
+  SellerRegisterDto,
 } from './dtos';
 import { LoginResponse } from './interfaces/login_response.interface';
 import { AccountService } from './services';
@@ -21,6 +22,14 @@ export class AccountController {
     return this.accountService.createAffiliateUser(dto, [
       'AFFILIATE_USER_GROUP',
     ]);
+  }
+
+  @Roles({ roles: ['super-admin'], mode: RoleMatchingMode.ALL })
+  @Post('seller/register')
+  async registerSellerAdmin(
+    @Body() dto: SellerRegisterDto,
+  ): Promise<{ userId: number; message: string }> {
+    return this.accountService.createSellerUser(dto, ['STORE_OWNER_GROUP']);
   }
 
   @Public()

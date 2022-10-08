@@ -1,5 +1,7 @@
 export interface AffiliateRegisterContext {
-  firstName: string;
-  email: string;
-  verificationLink: string;
+  affiliateVerification: {
+    firstName: string;
+    email: string;
+    verificationLink: string;
+  };
 }

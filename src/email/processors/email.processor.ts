@@ -15,11 +15,7 @@ export class EmailConsumer extends WorkerHost {
       to: job.data.recepient,
       subject: job.data.subject,
       template: job.data.template,
-      context: {
-        affiliateVerification: {
-          ...job.data.contextObj,
-        },
-      },
+      context: job.data.contextObj,
     });
   }
 }

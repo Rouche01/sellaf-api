@@ -55,6 +55,8 @@ model Seller {
 
   phoneNumber  String
   active       Boolean @default(false)
+  businessName String
+  address      String
   totalEarning Int?
 
   userId Int  @unique

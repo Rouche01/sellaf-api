@@ -6,13 +6,14 @@ import {
 import add from 'date-fns/add';
 import compareAsc from 'date-fns/compareAsc';
 import { EmailService } from 'src/email';
-import { UserGroups } from '../interfaces';
+import { SellerConfirmationContext, UserGroups } from '../interfaces';
 import { PrismaService } from 'src/prisma';
 import { generateAffiliateId, generateUniqueUsername } from 'src/account/utils';
 import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
   LoginDto,
+  SellerRegisterDto,
 } from '../dtos';
 import { KeycloakUserService } from './keycloak_user.service';
 import { applicationConfig } from 'src/config';
@@ -99,9 +100,11 @@ export class AccountService {
         await this.emailService.addEmailJob<AffiliateRegisterContext>({
           template: 'affiliate_verification',
           contextObj: {
-            firstName: dto.firstName,
-            email: dto.email,
-            verificationLink,
+            affiliateVerification: {
+              firstName: dto.firstName,
+              email: dto.email,
+              verificationLink,
+            },
           },
           recepient: dto.email,
           subject: 'Verify your Email',
@@ -112,8 +115,88 @@ export class AccountService {
       });
       return { userId: user.id, message: 'Affiliate created successfully!' };
     } catch (err) {
+      this.logger.error(
+        err?.message || 'Something went wrong with creating an affiliate',
+      );
       throw new InternalServerErrorException(
         err?.message || 'Something went wrong with creating an affiliate',
+      );
+    }
+  }
+
+  async createSellerUser(
+    dto: SellerRegisterDto,
+    userGroup: Array<UserGroups>,
+  ): Promise<{ userId: number; message: string }> {
+    const username = generateUniqueUsername({
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+    });
+    const keycloakAttrs = {
+      phoneNumber: [dto.phoneNumber],
+      businessName: [dto.businessName],
+      address: [dto.address],
+    };
+
+    try {
+      const kcUserId = await this.keycloakUserService.createKeycloakUser({
+        userData: dto,
+        username,
+        userGroup,
+        userAttrs: keycloakAttrs,
+      });
+
+      const user = await this.prismaService.user.create({
+        data: {
+          email: dto.email,
+          firstName: dto.firstName,
+          keycloakUserId: kcUserId,
+          username,
+          lastName: dto.lastName,
+          seller: {
+            create: {
+              address: dto.address,
+              businessName: dto.businessName,
+              phoneNumber: dto.phoneNumber,
+              active: true,
+            },
+          },
+          userRole: {
+            create: [{ role: 'ROLE_SELLER_ADMIN' }, { role: 'ROLE_SELLER' }],
+          },
+        },
+      });
+
+      const emailJobResp =
+        await this.emailService.addEmailJob<SellerConfirmationContext>({
+          template: 'seller_confirmation',
+          contextObj: {
+            seller: {
+              firstName: dto.firstName,
+              email: dto.email,
+              password: dto.password,
+              profileLink: `http://localhost:3000/profile`,
+            },
+          },
+          recepient: dto.email,
+          subject: 'Seller Account Created',
+        });
+
+      this.logger.log({
+        emailJobSuccess: !!emailJobResp.failedReason,
+        failedReason: emailJobResp.failedReason,
+      });
+
+      return {
+        userId: user.id,
+        message: 'Seller account created successfully',
+      };
+    } catch (err) {
+      this.logger.error(
+        err?.message || 'Something went wrong creating an affiliate account',
+      );
+      throw new InternalServerErrorException(
+        err?.message || 'Something went wrong creating an affiliate account',
       );
     }
   }

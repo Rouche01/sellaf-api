@@ -6,7 +6,11 @@ import { applicationConfig, validationSchema } from './config';
 import { PrismaModule } from './prisma';
 import { BullBoardModule } from './bull_board';
 import { AppLoggerMiddleware, AppLoggerModule } from './app_logger';
-import { AuthGuard, KeycloakConnectModule } from 'nest-keycloak-connect';
+import {
+  AuthGuard,
+  KeycloakConnectModule,
+  RoleGuard,
+} from 'nest-keycloak-connect';
 import { KeycloakAuthModule, KeycloakAuthService } from './keycloak_auth';
 import { APP_GUARD } from '@nestjs/core';
 import { PlatformSetupModule } from './platform_setup';
@@ -33,6 +37,10 @@ import { PlatformSetupModule } from './platform_setup';
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RoleGuard,
     },
   ],
 })
