@@ -144,6 +144,7 @@ export class AccountService {
         username,
         userGroup,
         userAttrs: keycloakAttrs,
+        emailVerified: true,
       });
 
       const user = await this.prismaService.user.create({

@@ -19,10 +19,10 @@ export class KeycloakAuthService implements KeycloakConnectOptionsFactory {
     | Promise<KeycloakConnectOptions> {
     return {
       authServerUrl: this.appConfig.keycloakServer,
-      // added secret because it is a required property but not needed for offline token validation
-      secret: '',
+      clientId: this.appConfig.kcSellafApiClientId,
+      secret: this.appConfig.kcSellafApiClientSecret,
       realm: this.appConfig.keycloakServerRealmName,
-      tokenValidation: TokenValidation.OFFLINE,
+      tokenValidation: TokenValidation.ONLINE,
     };
   }
 }

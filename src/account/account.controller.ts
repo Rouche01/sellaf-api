@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Get, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { Public, RoleMatchingMode, Roles } from 'nest-keycloak-connect';
+import { Public, Roles } from 'nest-keycloak-connect';
 import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
@@ -24,8 +24,8 @@ export class AccountController {
     ]);
   }
 
-  @Roles({ roles: ['super-admin'], mode: RoleMatchingMode.ALL })
   @Post('seller/register')
+  @Roles({ roles: ['realm:super-admin'] })
   async registerSellerAdmin(
     @Body() dto: SellerRegisterDto,
   ): Promise<{ userId: number; message: string }> {
