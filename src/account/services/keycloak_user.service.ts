@@ -169,4 +169,32 @@ export class KeycloakUserService {
       );
     }
   }
+
+  async resetUserPassword(newPassword: string, kcUserId: string) {
+    const resetPasswordUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users/${kcUserId}/reset-password`;
+    const adminAccessToken = await this.getKeycloakAdminAccessToken();
+
+    try {
+      await lastValueFrom(
+        this.httpService
+          .put(
+            resetPasswordUrl,
+            {
+              type: 'password',
+              value: newPassword,
+              temporary: false,
+            },
+            { headers: { Authorization: `Bearer ${adminAccessToken}` } },
+          )
+          .pipe(),
+      );
+
+      this.logger.log(`Reset password for user ${kcUserId}`);
+    } catch (err) {
+      this.logger.log(err?.response?.data || err?.message);
+      throw new InternalServerErrorException(
+        err?.message || 'Unable to reset password for keycloak user',
+      );
+    }
+  }
 }

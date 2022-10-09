@@ -4,4 +4,5 @@ export {
   encryptToken,
   generateConfirmationToken,
   verifyConfirmationToken,
+  isTokenExpired,
 } from './generate_confirmation_token.util';

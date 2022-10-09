@@ -1,10 +1,14 @@
 import { Body, Controller, Post, Get, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { Public, Roles } from 'nest-keycloak-connect';
+import { AuthenticatedUser, Public, Roles } from 'nest-keycloak-connect';
+import { AuthenticatedUser as AuthenticatedUserType } from 'src/interfaces';
+import { AuthUserPipe } from 'src/pipes';
 import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
   LoginDto,
+  ResetPasswordConfirmDto,
+  ResetPasswordDto,
   SellerRegisterDto,
 } from './dtos';
 import { LoginResponse } from './interfaces/login_response.interface';
@@ -13,6 +17,19 @@ import { AccountService } from './services';
 @Controller('account')
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
+
+  @Get('me')
+  getMe(@AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType) {
+    return {
+      sub: user.sub,
+      id: user.id,
+      email: user.email,
+      sellerId: user.sellerId,
+      affiliateId: user.affiliateId,
+      roles: user.realm_access.roles,
+      emailVerified: user.email_verified,
+    };
+  }
 
   @Public()
   @Post('affiliate/register')
@@ -47,5 +64,21 @@ export class AccountController {
   @Post('/login')
   async login(@Body() dto: LoginDto): Promise<LoginResponse> {
     return this.accountService.login(dto);
+  }
+
+  @Post('password/reset/get')
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+  ) {
+    return this.accountService.sendResetPasswordToken(dto, user);
+  }
+
+  @Post('password/reset/confirm')
+  async resetPasswordConfirm(
+    @Body() dto: ResetPasswordConfirmDto,
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+  ) {
+    return this.accountService.confirmPasswordReset(dto, user);
   }
 }

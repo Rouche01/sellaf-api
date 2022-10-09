@@ -3,17 +3,23 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import add from 'date-fns/add';
-import compareAsc from 'date-fns/compareAsc';
 import { EmailService } from 'src/email';
 import { SellerConfirmationContext, UserGroups } from '../interfaces';
 import { PrismaService } from 'src/prisma';
-import { generateAffiliateId, generateUniqueUsername } from 'src/account/utils';
+import {
+  generateAffiliateId,
+  generateUniqueUsername,
+  isTokenExpired,
+} from 'src/account/utils';
 import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
   LoginDto,
+  ResetPasswordConfirmDto,
+  ResetPasswordDto,
   SellerRegisterDto,
 } from '../dtos';
 import { KeycloakUserService } from './keycloak_user.service';
@@ -27,6 +33,8 @@ import { AffiliateRegisterContext } from '../interfaces';
 import { AppLoggerService } from 'src/app_logger';
 import { LoginResponse } from '../interfaces/login_response.interface';
 import { ConfigType } from '@nestjs/config';
+import { ResetTokenContext } from '../interfaces/reset_token_context.interface';
+import { AuthenticatedUser } from 'src/interfaces';
 
 @Injectable()
 export class AccountService {
@@ -272,10 +280,8 @@ export class AccountService {
         };
       }
 
-      // compareInt is -1 when the current date is greater than the token expiry date
-      const compareInt = compareAsc(confirmationToken.expiresAt, new Date());
-
-      if (compareInt === -1) {
+      const tokenExpired = isTokenExpired(confirmationToken);
+      if (tokenExpired) {
         return {
           message: 'Verification link is expired, request for a new one',
           status: 'failed',
@@ -313,9 +319,6 @@ export class AccountService {
           'Something went wrong with the verification, resend verfication link',
         status: 'failed',
       };
-      // throw new InternalServerErrorException(
-      //   err?.message || 'Something went wrong with email verification',
-      // );
     }
   }
 
@@ -334,5 +337,99 @@ export class AccountService {
       accessToken: kcLoginResp.access_token,
       refreshToken: kcLoginResp.refresh_token,
     };
+  }
+
+  async sendResetPasswordToken(
+    dto: ResetPasswordDto,
+    user: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    if (user.email !== dto.email) {
+      throw new UnauthorizedException('Unauthorized to perform this action');
+    }
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { email: dto.email },
+      });
+
+      if (!user) {
+        throw new BadRequestException('User with email does not exist');
+      }
+
+      const resetToken = generateConfirmationToken(4);
+      const encryptedToken = await encryptToken(
+        +this.appConfig.bcryptTokenSalt,
+        resetToken,
+      );
+
+      await this.prismaService.$transaction([
+        this.prismaService.confirmationToken.deleteMany({
+          where: { userId: user.id },
+        }),
+        this.prismaService.confirmationToken.create({
+          data: {
+            expiresAt: add(new Date(), { minutes: 15 }),
+            token: encryptedToken,
+            userId: user.id,
+          },
+        }),
+      ]);
+
+      const emailJobResp =
+        await this.emailService.addEmailJob<ResetTokenContext>({
+          template: 'reset_token',
+          contextObj: { resetToken: { code: resetToken } },
+          recepient: user.email,
+          subject: 'Reset password instructions',
+        });
+      this.logger.log({
+        emailJobSuccess: !!emailJobResp.failedReason,
+        failedReason: emailJobResp.failedReason,
+      });
+      return { message: 'Password reset token has been sent to your email' };
+    } catch (err) {
+      this.logger.error(err?.message || 'Something went wrong');
+      throw new InternalServerErrorException(
+        err?.message || 'Something went wrong',
+      );
+    }
+  }
+
+  async confirmPasswordReset(
+    dto: ResetPasswordConfirmDto,
+    user: AuthenticatedUser,
+  ) {
+    try {
+      const token = await this.prismaService.confirmationToken.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!token) {
+        throw new BadRequestException('Token expired, request for a new one');
+      }
+
+      if (isTokenExpired(token)) {
+        throw new BadRequestException('Token expired, request for a new one');
+      }
+
+      const tokenIsValid = await verifyConfirmationToken(
+        dto.token,
+        token.token,
+      );
+
+      if (!tokenIsValid) {
+        throw new BadRequestException(
+          'Reset token is invalid, request for a new one',
+        );
+      }
+
+      await this.keycloakUserService.resetUserPassword(dto.password, user.sub);
+      // TO-DO: Send email on successful password reset
+      return { message: 'Password reset successful' };
+    } catch (err) {
+      this.logger.error(err?.message || 'Unable to reset password');
+      throw new InternalServerErrorException(
+        err?.message || 'Something went wrong',
+      );
+    }
   }
 }
