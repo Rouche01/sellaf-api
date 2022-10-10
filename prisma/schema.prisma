@@ -25,6 +25,25 @@ enum Currency {
   RWF
 }
 
+enum Country {
+  NG
+  GH
+  KE
+  RW
+}
+
+enum TransactionType {
+  AFFILIATE_SUBSCRIPTION
+  PRODUCT_PURCHASE
+  STORE_WITHDRAWAL
+  AFFILIATE_WITHDRAWAL
+}
+
+enum ChargeType {
+  DEBIT
+  CREDIT
+}
+
 model UserRole {
   userId Int
   user   User @relation(fields: [userId], references: [id])
@@ -47,10 +66,12 @@ model User {
   username       String
   keycloakUserId String
 
-  seller            Seller?
-  affiliate         Affiliate?
-  userRole          UserRole[]
-  confirmationToken ConfirmationToken[]
+  seller                Seller?
+  affiliate             Affiliate?
+  userRoles             UserRole[]
+  confirmationToken     ConfirmationToken[]
+  initiatedTransactions Transaction[]       @relation("InitiatedTransactions")
+  referredTransactions  Transaction[]       @relation("ReferredTransactions")
 
   @@map("user")
 }
@@ -85,6 +106,11 @@ model Affiliate {
   balance         Decimal @default(0) @db.Decimal(25, 2)
   active          Boolean @default(false)
 
+  bankName      String?
+  accountNumber String?
+  bankCode      String?
+  beneficiaryId Int?
+
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
 
@@ -114,14 +140,48 @@ model Store {
   bankName        String?
   accountNumber   String?
   bankCode        String?
+  beneficiaryId   Int?
+  country         Country  @default(NG)
   currency        Currency @default(NGN)
   totalEarning    Decimal  @default(0) @db.Decimal(25, 2)
   amountWithdrawn Decimal  @default(0) @db.Decimal(25, 2)
   balance         Decimal  @default(0) @db.Decimal(25, 2)
 
-  sellerId Int
-  owner    Seller    @relation(fields: [sellerId], references: [id])
-  products Product[]
+  sellerId     Int
+  owner        Seller        @relation(fields: [sellerId], references: [id])
+  products     Product[]
+  transactions Transaction[]
+
+  @@map("store")
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type           TransactionType
+  chargeType     ChargeType
+  successful     Boolean         @default(false)
+  flutterwaveRef String?
+  coinbaseRef    String?
+  referenceCode  String
+  address        String?
+  amount         Decimal         @db.Decimal(15, 2)
+
+  initiatedBy     Int
+  initiatedByUser User @relation("InitiatedTransactions", fields: [initiatedBy], references: [id])
+
+  referredBy     Int?
+  referredByUser User? @relation("ReferredTransactions", fields: [referredBy], references: [id])
+
+  storeId Int?
+  store   Store? @relation(fields: [storeId], references: [id])
+
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  @@map("transaction")
 }
 
 model Product {
@@ -131,6 +191,9 @@ model Product {
 
   name String
 
-  storeId Int
-  store   Store @relation(fields: [storeId], references: [id])
+  storeId      Int
+  store        Store         @relation(fields: [storeId], references: [id])
+  transactions Transaction[]
+
+  @@map("product")
 }
