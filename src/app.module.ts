@@ -15,6 +15,7 @@ import { KeycloakAuthModule, KeycloakAuthService } from './keycloak_auth';
 import { APP_GUARD } from '@nestjs/core';
 import { PlatformSetupModule } from './platform_setup';
 import { StoreModule } from './store';
+import { PaymentModule } from './payment';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { StoreModule } from './store';
     AppLoggerModule,
     PlatformSetupModule,
     StoreModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [

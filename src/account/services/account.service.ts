@@ -7,7 +7,11 @@ import {
 } from '@nestjs/common';
 import add from 'date-fns/add';
 import { EmailService } from 'src/email';
-import { SellerConfirmationContext, UserGroups } from '../interfaces';
+import {
+  PasswordUpdatedContext,
+  SellerConfirmationContext,
+  UserGroups,
+} from '../interfaces';
 import { PrismaService } from 'src/prisma';
 import {
   generateAffiliateId,
@@ -424,6 +428,17 @@ export class AccountService {
 
       await this.keycloakUserService.resetUserPassword(dto.password, user.sub);
       // TO-DO: Send email on successful password reset
+      await this.emailService.addEmailJob<PasswordUpdatedContext>({
+        template: 'password_changed',
+        contextObj: {
+          passwordUpdated: {
+            firstName: user.given_name,
+            userAccount: 'http://localhost:3000/profile',
+          },
+        },
+        recepient: user.email,
+        subject: 'Your password has been changed',
+      });
       return { message: 'Password reset successful' };
     } catch (err) {
       this.logger.error(err?.message || 'Unable to reset password');

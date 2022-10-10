@@ -21,4 +21,11 @@ export const validationSchema = Joi.object({
   ADMIN_USERNAME: Joi.string().required(),
   ADMIN_EMAIL: Joi.string().required(),
   ADMIN_PASSWORD: Joi.string().required(),
+  FLUTTERWAVE_API_BASE_URL: Joi.string().required(),
+  FLUTTERWAVE_PUBLIC_KEY: Joi.string().required(),
+  FLUTTERWAVE_SECRET_KEY: Joi.string().required(),
+  FLUTTERWAVE_ENCRYPTION_KEY: Joi.string().required(),
+  FLUTTERWAVE_TEST_PUBLIC_KEY: Joi.string().required(),
+  FLUTTERWAVE_TEST_SECRET_KEY: Joi.string().required(),
+  FLUTTERWAVE_TEST_ENCRYPTION_KEY: Joi.string().required(),
 });

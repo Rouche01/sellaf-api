@@ -19,4 +19,13 @@ export const applicationConfig = registerAs('application', () => ({
   adminUsername: process.env.ADMIN_USERNAME,
   adminEmail: process.env.ADMIN_EMAIL,
   adminPassword: process.env.ADMIN_PASSWORD,
+  flutterwave: {
+    apiBaseUrl: process.env.FLUTTERWAVE_API_BASE_URL,
+    livePublicKey: process.env.FLUTTERWAVE_PUBLIC_KEY,
+    liveSecretKey: process.env.FLUTTERWAVE_SECRET_KEY,
+    liveEncryptionKey: process.env.FLUTTERWAVE_ENCRYPTION_KEY,
+    testPublicKey: process.env.FLUTTERWAVE_TEST_PUBLIC_KEY,
+    testSecretKey: process.env.FLUTTERWAVE_TEST_SECRET_KEY,
+    testEncryptionKey: process.env.FLUTTERWAVE_TEST_ENCRYPTION_KEY,
+  },
 }));
