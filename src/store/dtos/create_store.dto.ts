@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { Currency } from 'src/interfaces';
+import { Country, Currency } from 'src/interfaces';
 
 export class CreateStoreDto {
   @IsString()
@@ -8,5 +8,9 @@ export class CreateStoreDto {
 
   @IsString()
   @IsOptional()
-  currency: Currency;
+  currency?: Currency;
+
+  @IsString()
+  @IsOptional()
+  country?: Country;
 }

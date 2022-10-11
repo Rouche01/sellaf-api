@@ -2,7 +2,11 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { firstValueFrom, lastValueFrom } from 'rxjs';
 import { AppLoggerService } from 'src/app_logger';
-import { FlwBank, ResolveAccountResponse } from 'src/interfaces';
+import {
+  AddBeneficiariesResponse,
+  FlwBank,
+  ResolveAccountResponse,
+} from 'src/interfaces';
 
 @Injectable()
 export class FlutterwaveService {
@@ -44,6 +48,37 @@ export class FlutterwaveService {
       };
     } catch (err) {
       console.log(err?.response);
+      this.logger.error(err?.response?.data || err?.message);
+      throw new InternalServerErrorException(
+        err?.message || 'Something went wrong',
+      );
+    }
+  }
+
+  async addTransferBeneficiaries(
+    bankCode: string,
+    accountNumber: string,
+    beneficiaryName: string,
+  ) {
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .post<AddBeneficiariesResponse>('/beneficiaries', {
+            account_number: accountNumber,
+            account_bank: bankCode,
+            beneficiary_name: beneficiaryName,
+          })
+          .pipe(),
+      );
+
+      return {
+        id: response.data.data.id,
+        bankCode: response.data.data.bank_code,
+        accountNumber: response.data.data.account_number,
+        beneficiaryName: response.data.data.full_name,
+        bankName: response.data.data.bank_name,
+      };
+    } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
       throw new InternalServerErrorException(
         err?.message || 'Something went wrong',

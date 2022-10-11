@@ -1,7 +1,16 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { Public } from 'nest-keycloak-connect';
-import { FlwBank } from 'src/interfaces';
-import { ConfirmBankAccountDto } from './dtos';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { AuthenticatedUser, Public, Roles } from 'nest-keycloak-connect';
+import {
+  AuthenticatedUser as AuthenticatedUserType,
+  FlwBank,
+} from 'src/interfaces';
+import { AuthUserPipe } from 'src/pipes';
+import {
+  AddBankDto,
+  AddBankQueryDto,
+  ConfirmBankAccountDto,
+  GetBanksQueryDto,
+} from './dtos';
 import { PaymentService } from './services';
 
 @Controller('payment')
@@ -10,12 +19,12 @@ export class PaymentController {
 
   @Get('/banks')
   @Public()
-  async getBankList(): Promise<{
+  async getBankList(@Query() dto: GetBanksQueryDto): Promise<{
     status: string;
     message: string;
     banks: FlwBank[];
   }> {
-    const banks = await this.paymentService.getBankList();
+    const banks = await this.paymentService.getBankList(dto.country);
     return {
       status: 'success',
       message: 'Banks successfully retrieved',
@@ -24,7 +33,22 @@ export class PaymentController {
   }
 
   @Post('/bank/confirm')
-  async confirmBankAccount(@Body() dto: ConfirmBankAccountDto) {
+  async confirmBankAccount(@Body() dto: ConfirmBankAccountDto): Promise<{
+    message: string;
+    status: string;
+    accountNumber: string;
+    accountName: string;
+  }> {
     return this.paymentService.confirmAccountNumber(dto);
+  }
+
+  @Post('/bank/add')
+  @Roles({ roles: ['realm:seller-admin', 'realm:affiliate'] })
+  async addBankForPayment(
+    @Body() dto: AddBankDto,
+    @Query() query: AddBankQueryDto,
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+  ): Promise<{ status: string; message: string }> {
+    return this.paymentService.addBankAccount(dto, query, user);
   }
 }

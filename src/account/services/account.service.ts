@@ -93,7 +93,7 @@ export class AccountService {
               affiliateCode: affiliateId,
             },
           },
-          userRole: {
+          userRoles: {
             create: [{ role: 'ROLE_AFFILIATE' }],
           },
           confirmationToken: {
@@ -175,7 +175,7 @@ export class AccountService {
               active: true,
             },
           },
-          userRole: {
+          userRoles: {
             create: [{ role: 'ROLE_SELLER_ADMIN' }, { role: 'ROLE_SELLER' }],
           },
         },
@@ -240,7 +240,7 @@ export class AccountService {
           lastName: 'Admin',
           keycloakUserId: kcUserId,
           username,
-          userRole: {
+          userRoles: {
             create: [
               { role: 'ROLE_SUPER_ADMIN' },
               { role: 'ROLE_SELLER' },
