@@ -7,6 +7,7 @@ import {
   FlwBank,
   ResolveAccountResponse,
 } from 'src/interfaces';
+import { PayWithCardPayload, PayWithCardResponse } from '../interfaces';
 
 @Injectable()
 export class FlutterwaveService {
@@ -85,4 +86,72 @@ export class FlutterwaveService {
       );
     }
   }
+
+  async payWithCard({
+    amount,
+    cardNumber,
+    currency,
+    cvv,
+    email,
+    expiryMonth,
+    expiryYear,
+    fullName,
+    txRef,
+  }: PayWithCardPayload) {
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .post<PayWithCardResponse>('/charges?type=card', {
+            card_number: cardNumber,
+            cvv,
+            expiry_month: expiryMonth,
+            expiry_year: expiryYear,
+            currency,
+            amount,
+            fullname: fullName,
+            email,
+            tx_ref: txRef,
+          })
+          .pipe(),
+      );
+      return {
+        flwRef: response.data.data.flw_ref,
+        txRef: response.data.data.tx_ref,
+        message: response.data.data.processor_response,
+        status: response.data.data.status,
+      };
+    } catch (err) {
+      this.logger.error(err?.response?.data || err?.message);
+      throw new InternalServerErrorException(
+        err?.message || 'Something went wrong',
+      );
+    }
+  }
+
+  async validateCardPayment(otp: string, flwRef: string) {
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .post<PayWithCardResponse>('/validate-charge', {
+            otp,
+            flw_ref: flwRef,
+            type: 'card',
+          })
+          .pipe(),
+      );
+
+      return {
+        flwRef: response.data.data.flw_ref,
+        txRef: response.data.data.tx_ref,
+        status: response.data.data.status,
+      };
+    } catch (err) {
+      this.logger.error(err?.response?.data || err?.message);
+      throw new InternalServerErrorException(
+        err?.message || 'Something went wrong',
+      );
+    }
+  }
+
+  // async payViaBankTransfer() {}
 }

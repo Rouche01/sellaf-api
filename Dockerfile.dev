@@ -1,14 +1,35 @@
-FROM node:18-alpine
+FROM node:18-alpine As development
 
 WORKDIR /usr/src/app
 COPY package*.json ./
 
-RUN npm ci
+# Installing prerequisites for bcrypt, then install node_modules,
+# compile bcrypt and delete prerequisites for smaller docker image
+RUN apk add --no-cache make gcc g++ python3 && \
+  npm ci && \
+  npm rebuild bcrypt --build-from-source && \
+  apk del make gcc g++ python3
 COPY . .
 
 RUN npm run lint
 
-RUN npx prisma generate
 RUN npx prisma migrate deploy
+RUN npx prisma generate
 
-CMD [ "npm", "run", "start:dev" ]
+# Build for production
+FROM development As builder
+
+RUN npm run build
+ENV APP_ENVIRONMENT production
+
+RUN npm ci --only=production && npm cache clean --force
+
+# For production
+FROM node:18-alpine As production
+
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/dist ./dist
+
+EXPOSE 4005
+
+CMD [ "node", "dist/main.js" ]
