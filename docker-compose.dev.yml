@@ -17,8 +17,9 @@ services:
     depends_on:
       - dev-db
       - redis
+      - keycloak-server
     platform: "linux/amd64"
-    command: npm run start:dev
+    command: ["./scripts/wait-for-postgres.sh", "dev-db", "npm", "run", "start:dev"]
   dev-db:
     image: postgres:13-alpine
     ports:
@@ -37,21 +38,14 @@ services:
     ports:
       - 8080:8080
   keycloak-server:
-    image: quay.io/keycloak/keycloak:19.0.2
+    image: auth-server
+    build:
+      context: .
+      dockerfile: Dockerfile.kc
     ports:
-      - "8082:8080"
-    environment:
-      DB_VENDOR: POSTGRES
-      DB_ADDR: postgres
-      DB_DATABASE: sellaf-dev
-      DB_USER: rouche
-      DB_SCHEMA: public
-      DB_PASSWORD: rouche
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      - "8082:8888"
     depends_on:
       - dev-db
-    command: start-dev
   redis:
     image: redis:6.2-alpine
     restart: always
