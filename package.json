@@ -16,7 +16,7 @@
     "prisma:migrate:deploy": "export $(cat .env.local | xargs) && npx prisma migrate deploy",
     "prisma:generate": "export $(cat .env.local | xargs) && npx prisma generate",
     "rm:anon": "docker-compose rm -vf",
-    "start:dev": "nest start --watch",
+    "start:dev": "npx prisma migrate deploy && npx prisma generate && nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

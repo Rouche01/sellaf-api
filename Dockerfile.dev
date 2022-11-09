@@ -1,5 +1,6 @@
 FROM node:18-alpine As development
 
+USER root
 WORKDIR /usr/src/app
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -11,13 +12,11 @@ RUN apk add --no-cache make gcc g++ python3 && \
   npm rebuild bcrypt --build-from-source && \
   apk del make gcc g++ python3
 
+RUN apk add --no-cache postgresql-client
+
 COPY . .
-RUN chmod +x ./scripts/wait-for-postgres.sh
-
-# RUN npm run lint
-
-# RUN npx prisma migrate deploy
-# RUN npx prisma generate
+COPY ./wait-for-pg-and-exec.sh /wait-for-pg-and-exec.sh
+RUN chmod +x /wait-for-pg-and-exec.sh
 
 # Build for production
 FROM development As builder
