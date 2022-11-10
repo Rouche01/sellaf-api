@@ -5,6 +5,8 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY prisma ./prisma/
 
+ENV NODE_ENV development
+
 # Installing prerequisites for bcrypt, then install node_modules,
 # compile bcrypt and delete prerequisites for smaller docker image
 RUN apk add --no-cache make gcc g++ python3 && \
@@ -22,7 +24,7 @@ RUN chmod +x /wait-for-pg-and-exec.sh
 FROM development As builder
 
 RUN npm run build
-ENV APP_ENVIRONMENT production
+ENV NODE_ENV production
 
 RUN npm ci --only=production && npm cache clean --force
 
@@ -31,7 +33,14 @@ FROM node:18-alpine As production
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/package*.json ./
+COPY --from=builder /usr/src/app/prisma ./prisma/
+
+RUN apk add --no-cache postgresql-client
+
+COPY ./wait-for-pg-and-exec.sh /wait-for-pg-and-exec.sh
+RUN chmod +x /wait-for-pg-and-exec.sh
 
 EXPOSE 4005
 
-CMD [ "node", "dist/main.js" ]
+CMD ["/bin/sh", "-c", "/wait-for-pg-and-exec.sh"]

@@ -1,12 +1,12 @@
 version: '3.8'
 services:
-  sellaf-api:
-    container_name: 'sellaf-v2-api'
+  sellaf-api-prod:
+    container_name: 'sellaf-v2-api-prod'
     image: 'sellaf-v2-api-image'
     build:
       context: .
       dockerfile: Dockerfile
-      target: development
+      target: production
     env_file:
       - ./.env
     volumes:
@@ -15,12 +15,11 @@ services:
     ports:
       - 4005:4005
     depends_on:
-      - dev-db
+      - prod-db
       - redis
       - keycloak-server
     platform: "linux/amd64"
-    command: ["/bin/sh", "-c", "/wait-for-pg-and-exec.sh"]
-  dev-db:
+  prod-db:
     image: postgres:13-alpine
     ports:
       - "5434:5432"
@@ -28,13 +27,6 @@ services:
       - ./.env.db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-  adminer:
-    image: adminer
-    depends_on:
-      - dev-db
-    restart: always
-    ports:
-      - 8080:8080
   keycloak-server:
     image: auth-server
     build:
@@ -43,7 +35,7 @@ services:
     ports:
       - "8082:8888"
     depends_on:
-      - dev-db
+      - prod-db
   redis:
     image: redis:6.2-alpine
     restart: always
