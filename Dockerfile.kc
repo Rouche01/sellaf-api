@@ -3,17 +3,6 @@ FROM quay.io/keycloak/keycloak:19.0.2
 USER root
 RUN microdnf update -y && microdnf install -y jq && microdnf clean all
 
-ENV DB_VENDOR POSTGRES
-ENV DB_ADDR postgres
-ENV DB_DATABASE sellaf-dev
-ENV DB_USER rouche
-ENV DB_SCHEMA public
-ENV DB_PASSWORD rouche
-ENV KEYCLOAK_ADMIN admin
-ENV KEYCLOAK_ADMIN_PASSWORD admin
-ENV KC_MASTER_CLIENT_SECRET fy5xTzr102RUneV2seh7jkPjEaqK8RyC
-ENV KC_SELLAF_API_CLIENT_SECRET 8o6VAvR3AoeLK9U4uvPqoRBWq87LFGGR
-
 COPY ./keycloak-scripts /startup-scripts
 
 RUN find /startup-scripts -type f -exec chmod 755 {} \;

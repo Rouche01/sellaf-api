@@ -40,6 +40,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.kc
+    env_file:
+      - ./.env.kc
     ports:
       - "8082:8888"
     depends_on:
