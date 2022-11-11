@@ -40,6 +40,9 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout the files
+        uses: actions/checkout@v2
+
       - name: Deploy to my EC2 instance
         uses: easingthemes/ssh-deploy@v2.1.5
         env:
