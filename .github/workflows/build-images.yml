@@ -25,20 +25,11 @@ jobs:
       - name: Build, tag and push Sellaf API image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          API_ECR_REPOSITORY: ${{ secrets.API_ECR_REPOSITORY }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
-
-      - name: Build, tag and push Keycloak image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          KC_ECR_REPOSITORY: ${{ secrets.KC_ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -f Dockerfile.kc -t $ECR_REGISTRY/$KC_ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$KC_ECR_REPOSITORY:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Log out of Amazon ECR
         if: always()

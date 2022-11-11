@@ -14,20 +14,8 @@ ENV KEYCLOAK_ADMIN_PASSWORD admin
 ENV KC_MASTER_CLIENT_SECRET fy5xTzr102RUneV2seh7jkPjEaqK8RyC
 ENV KC_SELLAF_API_CLIENT_SECRET 8o6VAvR3AoeLK9U4uvPqoRBWq87LFGGR
 
-COPY ./scripts/kc-entrypoint.sh /kc-entrypoint.sh
-COPY ./scripts/kc-config.sh /kc-config.sh
-COPY ./scripts/kc-startup.sh /kc-startup.sh
-COPY ./scripts/kc-config-helpers.sh /kc-config-helpers.sh
-COPY ./scripts/kc-realm-master.sh /kc-realm-master.sh
-COPY ./scripts/kc-realm-sellaf.sh /kc-realm-sellaf.sh
-COPY ./scripts/kc-realms.sh /kc-realms.sh
+COPY ./keycloak-scripts /startup-scripts
 
-RUN chmod +x /kc-config.sh
-RUN chmod +x /kc-entrypoint.sh
-RUN chmod +x /kc-startup.sh
-RUN chmod +x /kc-config-helpers.sh
-RUN chmod +x /kc-realm-master.sh
-RUN chmod +x /kc-realm-sellaf.sh
-RUN chmod +x /kc-realms.sh
+RUN find /startup-scripts -type f -exec chmod 755 {} \;
 
-ENTRYPOINT [ "/kc-entrypoint.sh", "start-dev" ]
+ENTRYPOINT [ "/startup-scripts/kc-entrypoint.sh", "start-dev" ]
