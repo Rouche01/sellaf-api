@@ -1,4 +1,4 @@
-name: Build and Push Docker Images to ECR
+name: Build Image and Deploy to EC2
 
 on:
   push:
@@ -6,9 +6,10 @@ on:
 
 jobs:
   build:
+    name: Build and Push Docker Images to ECR
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout to code
+      - name: Checkout the files
         uses: actions/checkout@v2
 
       - name: Configure AWS Credentials
@@ -34,3 +35,17 @@ jobs:
       - name: Log out of Amazon ECR
         if: always()
         run: docker logout ${{ steps.login-ecr.outputs.registry }}
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to my EC2 instance
+        uses: easingthemes/ssh-deploy@v2.1.5
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SOURCE: "./"
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: ${{ secrets.REMOTE_TARGET }}
+          EXCLUDE: "/dist/, /node_modules/, /prisma/, /src/, /test/"
