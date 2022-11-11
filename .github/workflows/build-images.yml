@@ -36,12 +36,38 @@ jobs:
         if: always()
         run: docker logout ${{ steps.login-ecr.outputs.registry }}
 
-  deploy:
-    name: Deploy to EC2
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the files
-        uses: actions/checkout@v2
+      - name: Make envfile
+        uses: SpicyPizza/create-envfile@v1.3
+        with:
+          envkey_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          envkey_PORT: ${{ secrets.PORT }}
+          envkey_APP_ENVIRONMENT: ${{ secrets.APP_ENVIRONMENT }}
+          envkey_KEYCLOAK_SERVER: ${{ secrets.KEYCLOAK_SERVER }}
+          envkey_KEYCLOAK_SERVER_REALM_NAME: ${{ secrets.KEYCLOAK_SERVER_REALM_NAME }}
+          envkey_KEYCLOAK_ADMIN_CLIENT_ID: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_ID }}
+          envkey_KEYCLOAK_ADMIN_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}
+          envkey_KC_SELLAF_API_CLIENT_ID: ${{ secrets.KC_SELLAF_API_CLIENT_ID }}
+          envkey_KC_SELLAF_API_CLIENT_SECRET: ${{ secrets.KC_SELLAF_API_CLIENT_SECRET }}
+          envkey_SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          envkey_SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          envkey_SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          envkey_REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          envkey_REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          envkey_BCRYPT_TOKEN_SALT: ${{ secrets.BCRYPT_TOKEN_SALT }}
+          envkey_ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          envkey_ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          envkey_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          envkey_FLUTTERWAVE_API_BASE_URL: ${{ secrets.FLUTTERWAVE_API_BASE_URL }}
+          envkey_FLUTTERWAVE_PUBLIC_KEY: ${{ secrets.FLUTTERWAVE_PUBLIC_KEY }}
+          envkey_FLUTTERWAVE_SECRET_KEY: ${{ secrets.FLUTTERWAVE_SECRET_KEY }}
+          envkey_FLUTTERWAVE_ENCRYPTION_KEY: ${{ secrets.FLUTTERWAVE_ENCRYPTION_KEY }}
+          envkey_FLUTTERWAVE_TEST_PUBLIC_KEY: ${{ secrets.FLUTTERWAVE_TEST_PUBLIC_KEY }}
+          envkey_FLUTTERWAVE_TEST_SECRET_KEY: ${{ secrets.FLUTTERWAVE_TEST_SECRET_KEY }}
+          envkey_FLUTTERWAVE_TEST_ENCRYPTION_KEY: ${{ secrets.FLUTTERWAVE_TEST_ENCRYPTION_KEY }}
+          envkey_POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          envkey_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          file_name: .env
+          fail_on_empty: false
 
       - name: Deploy to my EC2 instance
         uses: easingthemes/ssh-deploy@v2.1.5
@@ -52,3 +78,9 @@ jobs:
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
           TARGET: ${{ secrets.REMOTE_TARGET }}
           EXCLUDE: "/dist/, /node_modules/, /prisma/, /src/, /test/"
+
+  # deploy:
+  #   name: Deploy to EC2
+  #   runs-on: ubuntu-latest
+  #   steps:
+
