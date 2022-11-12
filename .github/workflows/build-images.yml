@@ -41,6 +41,10 @@ jobs:
         run: |
           echo "image_version=test" >> $GITHUB_ENV
 
+      - name: test
+        run: |
+          echo "${{ env.image_version }}"
+
   set-env-vars:
     name: Set enviroment variables for all services
     runs-on: ubuntu-latest
