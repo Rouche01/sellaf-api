@@ -123,6 +123,15 @@ jobs:
           TARGET: ${{ secrets.REMOTE_TARGET }}
           EXCLUDE: "/dist/, /node_modules/, /prisma/, /src/, /test/"
 
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: docker-compose -f docker-compose.prod.yml up -d
+
   # deploy-to-ec2:
   #   name: Deploy to AWS EC2 instance
   #   runs-on: ubuntu-latest
