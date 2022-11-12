@@ -1,8 +1,7 @@
 version: '3.8'
 services:
   sellaf-api-prod:
-    container_name: 'sellaf-v2-api-prod'
-    image: 'sellaf-v2-api-image'
+    image: 022024849961.dkr.ecr.us-east-2.amazonaws.com/sellaf-api:${IMAGE_VERSION}
     build:
       context: .
       dockerfile: Dockerfile
