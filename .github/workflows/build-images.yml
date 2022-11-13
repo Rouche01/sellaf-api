@@ -121,7 +121,7 @@ jobs:
           REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
           TARGET: ${{ secrets.REMOTE_TARGET }}
-          EXCLUDE: "/dist/, /node_modules/, /prisma/, /src/, /test/"
+          EXCLUDE: "/dist/, /node_modules/, /src/, /test/"
 
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@master
