@@ -71,7 +71,7 @@ function authenticateRealm() {
     USERNAME=$2
     PASSWORD=$3
     #
-    $KCADM config credentials --server http://$HOST_FOR_KCADM:8888 --realm $REALM_NAME --user $USERNAME --client admin-cli --password $PASSWORD
+    $KCADM config credentials --server http://$HOST_FOR_KCADM:8888 --realm $REALM_NAME --user $USERNAME --password $PASSWORD
 }
 
 # create realm roles
