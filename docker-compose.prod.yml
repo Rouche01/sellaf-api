@@ -3,6 +3,8 @@ services:
   sellaf-api-prod:
     image: 022024849961.dkr.ecr.us-east-2.amazonaws.com/sellaf-api:${IMAGE_VERSION}
     build:
+      context: .
+      dockerfile: Dockerfile
       target: production
     env_file:
       - ./.env
