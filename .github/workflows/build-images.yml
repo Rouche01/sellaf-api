@@ -128,7 +128,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "${{ github.sha }} ${{ IMAGE_VERSION }}"
+            echo "${{ github.sha }}"
             aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 022024849961.dkr.ecr.us-east-2.amazonaws.com
             docker pull 022024849961.dkr.ecr.us-east-2.amazonaws.com/sellaf-api:${IMAGE_VERSION}
             docker compose -f docker-compose.prod.yml up -d
