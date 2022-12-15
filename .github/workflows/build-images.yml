@@ -90,7 +90,6 @@ jobs:
         with:
           envkey_POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           envkey_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          envkey_POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
           file_name: .env.db
           fail_on_empty: false
 
@@ -99,7 +98,7 @@ jobs:
         with:
           envkey_DB_VENDOR: "POSTGRES"
           envkey_DB_ADDR: "postgres"
-          envkey_DB_DATABASE: ${{ secrets.POSTGRES_DB }}
+          envkey_DB_DATABASE: ${{ secrets.KEYCLOAK_DB }}
           envkey_DB_USER: ${{ secrets.POSTGRES_USER }}
           envkey_DB_SCHEMA: "public"
           envkey_DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
