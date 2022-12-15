@@ -130,28 +130,5 @@ jobs:
           script: |
             aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 022024849961.dkr.ecr.us-east-2.amazonaws.com
             docker pull 022024849961.dkr.ecr.us-east-2.amazonaws.com/sellaf-api:${{ github.sha }}
-            docker compose -f docker-compose.prod.yml up -d
-
-  # deploy-to-ec2:
-  #   name: Deploy to AWS EC2 instance
-  #   runs-on: ubuntu-latest
-  #   needs: set-env-vars
-  #   steps:
-  #     - name: Checkout the files
-  #       uses: actions/checkout@v3
-
-  #     - name: Deploy to my EC2 instance
-  #       uses: easingthemes/ssh-deploy@v3.0.0
-  #       env:
-  #         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-  #         SOURCE: "./"
-  #         REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-  #         REMOTE_USER: ${{ secrets.REMOTE_USER }}
-  #         TARGET: ${{ secrets.REMOTE_TARGET }}
-  #         EXCLUDE: "/dist/, /node_modules/, /prisma/, /src/, /test/"
-
-  # deploy:
-  #   name: Deploy to EC2
-  #   runs-on: ubuntu-latest
-  #   steps:
+            docker-compose -f docker-compose.prod.yml up -d
 
