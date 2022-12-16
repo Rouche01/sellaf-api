@@ -15,7 +15,7 @@ services:
     ports:
       - 4005:4005
     depends_on:
-      - dev-db
+      - db-server
       - redis
       - keycloak-server
     platform: "linux/amd64"
@@ -34,7 +34,7 @@ services:
   adminer:
     image: adminer
     depends_on:
-      - dev-db
+      - db-server
     restart: always
     ports:
       - 8080:8080
@@ -48,7 +48,7 @@ services:
     ports:
       - "8082:8888"
     depends_on:
-      - dev-db
+      - db-server
   redis:
     image: redis:6.2-alpine
     restart: always
