@@ -42,7 +42,7 @@ COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/package*.json ./
 COPY --from=builder /usr/src/app/prisma ./prisma/
 
-RUN apk add --no-cache postgresql-client
+RUN apk add --no-cache postgresql-client openssl1.1-compat
 
 COPY ./wait-for-pg-and-exec.sh /wait-for-pg-and-exec.sh
 RUN chmod +x /wait-for-pg-and-exec.sh
