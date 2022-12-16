@@ -3,11 +3,7 @@
 
 set -e
 
-if [ "$NODE_ENV" == "development" ]; then
-    DB_HOST="dev-db"
-else
-    DB_HOST="prod-db"
-fi
+DB_HOST="db-server"
 
 # Login for user (`-U`) and once logged in execute quit ( `-c \q` )
 # If we can not login sleep for 1 sec

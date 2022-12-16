@@ -56,6 +56,7 @@ jobs:
         with:
           envkey_DATABASE_URL: ${{ secrets.DATABASE_URL }}
           envkey_PORT: ${{ secrets.PORT }}
+          envkey_NODE_ENV: ${{ secrets.NODE_ENV }}
           envkey_APP_ENVIRONMENT: ${{ secrets.APP_ENVIRONMENT }}
           envkey_KEYCLOAK_SERVER: ${{ secrets.KEYCLOAK_SERVER }}
           envkey_KEYCLOAK_SERVER_REALM_NAME: ${{ secrets.KEYCLOAK_SERVER_REALM_NAME }}
@@ -90,18 +91,20 @@ jobs:
         with:
           envkey_POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           envkey_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          envkey_POSTGRES_MULTIPLE_DATABASES: ${{ secrets.POSTGRES_MULTIPLE_DATABASES }}
           file_name: .env.db
           fail_on_empty: false
 
       - name: Make Keycloak envfile
         uses: SpicyPizza/create-envfile@v1.3
         with:
-          envkey_DB_VENDOR: "POSTGRES"
-          envkey_DB_ADDR: "postgres"
-          envkey_DB_DATABASE: ${{ secrets.KEYCLOAK_DB }}
-          envkey_DB_USER: ${{ secrets.POSTGRES_USER }}
-          envkey_DB_SCHEMA: "public"
-          envkey_DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          envkey_KC_DB: "postgres"
+          envkey_KC_DB_USERNAME: ${{ secrets.POSTGRES_USER }}
+          envkey_KC_DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          envkey_KC_DB_SCHEMA: "public"
+          envkey_KC_DB_URL_DATABASE: ${{ secrets.KEYCLOAK_DB }}
+          envkey_KC_DB_URL_HOST: "db-server"
+          envkey_KC_DB_URL_PORT: ${{ secrets.KEYCLOAK_DB_PORT }}
           envkey_KEYCLOAK_ADMIN: ${{ secrets.KEYCLOAK_ADMIN }}
           envkey_KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
           envkey_KC_MASTER_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}

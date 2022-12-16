@@ -20,8 +20,11 @@ services:
       - keycloak-server
     platform: "linux/amd64"
     command: ["/bin/sh", "-c", "/wait-for-pg-and-exec.sh"]
-  dev-db:
-    image: postgres:13-alpine
+  db-server:
+    image: 'postgres-db'
+    build:
+      context: .
+      dockerfile: Dockerfile.db
     ports:
       - "5434:5432"
     env_file:

@@ -1,4 +1,10 @@
-FROM node:18-alpine As development
+# Node.js version of your choice
+ARG NODE_VERSION="18"
+
+# Linux Alpine version of your choice
+ARG ALPINE_VERSION="3.17"
+
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} As development
 
 USER root
 WORKDIR /usr/src/app
@@ -9,7 +15,7 @@ ENV NODE_ENV development
 
 # Installing prerequisites for bcrypt, then install node_modules,
 # compile bcrypt and delete prerequisites for smaller docker image
-RUN apk add --no-cache make gcc g++ python3 && \
+RUN apk add --no-cache make gcc g++ python3 openssl1.1-compat &&  \
   npm ci && \
   npm rebuild bcrypt --build-from-source && \
   apk del make gcc g++ python3
@@ -29,7 +35,7 @@ ENV NODE_ENV production
 RUN npm ci --only=production && npm cache clean --force
 
 # For production
-FROM node:18-alpine As production
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} As production
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist

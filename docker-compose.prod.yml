@@ -18,7 +18,7 @@ services:
       - redis
       - keycloak-server
     platform: "linux/amd64"
-  prod-db:
+  db-server:
     image: postgres:13-alpine
     ports:
       - "5434:5432"
