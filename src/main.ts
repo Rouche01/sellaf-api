@@ -4,11 +4,11 @@ import { AppModule } from './app.module';
 import { AppLoggerService } from './app_logger';
 import { applicationConfig } from './config';
 import { badRequestExceptionFilter } from './filters';
-import { PlatformSetupService } from './platform_setup';
+// import { PlatformSetupService } from './platform_setup';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.get(PlatformSetupService).createPlatformManager();
+  // await app.get(PlatformSetupService).createPlatformManager();
   app.setGlobalPrefix('api', { exclude: ['/admin/queues'] });
   app.useGlobalPipes(
     new ValidationPipe({
