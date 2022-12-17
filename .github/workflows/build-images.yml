@@ -109,6 +109,7 @@ jobs:
           envkey_KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
           envkey_KC_MASTER_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}
           envkey_KC_SELLAF_API_CLIENT_SECRET: ${{ secrets.KC_SELLAF_API_CLIENT_SECRET }}
+          envkey_KC_HOSTNAME_STRICT: ${{ secrets.KC_HOSTNAME_STRICT }}
           file_name: .env.kc
           fail_on_empty: false
 
