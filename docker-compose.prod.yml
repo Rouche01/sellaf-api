@@ -34,10 +34,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.kc
+      target: production
     env_file:
       - ./.env.kc
     ports:
       - "8082:8888"
+      - "8443:8443"
     depends_on:
       - db-server
   redis:

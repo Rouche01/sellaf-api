@@ -12,7 +12,7 @@ function main() {
 
     ${0%/*}/kc-startup.sh &
 
-    /opt/keycloak/bin/kc.sh "${keycloak_cmd_arguments[@]}" --http-port=8888 --http-enabled=true
+    /opt/keycloak/bin/kc.sh "${keycloak_cmd_arguments[@]}" --http-port=8888
 }
 
 main "$@"

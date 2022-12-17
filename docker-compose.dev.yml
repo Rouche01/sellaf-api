@@ -43,12 +43,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.kc
+      target: development
     env_file:
       - ./.env.kc
     ports:
       - "8082:8888"
     depends_on:
       - db-server
+    entrypoint: [ "/startup-scripts/kc-entrypoint.sh", "start" ]
   redis:
     image: redis:6.2-alpine
     restart: always
