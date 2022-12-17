@@ -17,7 +17,7 @@ if [ "$KCADM" == "" ]; then
     echo "Using $KCADM as the admin CLI."
 fi
 
-authenticateRealm master $KEYCLOAK_ADMIN $KEYCLOAK_ADMIN_PASSWORD
+authenticateRealm master $KEYCLOAK_ADMIN $KEYCLOAK_ADMIN_PASSWORD $KC_MASTER_CLIENT_SECRET
 
 ${0%/*}/kc-realms.sh
 

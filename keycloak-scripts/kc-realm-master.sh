@@ -28,6 +28,8 @@ $KCADM update clients/$ID -r $REALM_NAME -s "clientAuthenticatorType=client-secr
 -s serviceAccountsEnabled=true -s authorizationServicesEnabled=true -s name="Admin Client" \
 -s standardFlowEnabled=true -s publicClient=false
 
+authenticateRealm master $KEYCLOAK_ADMIN $KEYCLOAK_ADMIN_PASSWORD $KC_MASTER_CLIENT_SECRET
+
 # add admin role to service account for admin-cli
 SERVICE_ACCOUNT_USERID=$(getUser $REALM_NAME "service-account-admin-cli")
 $KCADM add-roles --uusername "service-account-admin-cli" --rolename admin -r $REALM_NAME
