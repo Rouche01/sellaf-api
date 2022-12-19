@@ -31,6 +31,8 @@ services:
       - ./.env.db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: "exit 0" #further research on this
   adminer:
     image: adminer
     depends_on:
@@ -47,9 +49,10 @@ services:
     env_file:
       - ./.env.kc
     ports:
-      - "8082:8888"
+      - "8082:8080"
     depends_on:
-      - db-server
+      db-server:
+        condition: service_healthy
     entrypoint: [ "/startup-scripts/kc-entrypoint.sh", "start" ]
   redis:
     image: redis:6.2-alpine

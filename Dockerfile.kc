@@ -23,7 +23,4 @@ COPY ./keycloak-scripts /startup-scripts
 
 RUN find /startup-scripts -type f -exec chmod 755 {} \;
 
-RUN keytool -genkeypair -storepass password -storetype PKCS12 -keyalg RSA -keysize 2048 -dname "CN=server" \
-  -alias server -ext "SAN:c=DNS:localhost,IP:127.0.0.1" -keystore opt/keycloak/conf/server.keystore
-
 ENTRYPOINT [ "/startup-scripts/kc-entrypoint.sh", "start" ]

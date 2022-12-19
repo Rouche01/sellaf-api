@@ -75,7 +75,7 @@ function authenticateRealm() {
     SECRET=$4
 
     #
-    $KCADM config credentials --server http://$HOST_FOR_KCADM:8888 --realm $REALM_NAME --user $USERNAME --client admin-cli --password $PASSWORD --secret $SECRET
+    $KCADM config credentials --server https://auth.sellaf.africa --realm $REALM_NAME --user $USERNAME --client admin-cli --password $PASSWORD --secret $SECRET
 }
 
 # create realm roles
