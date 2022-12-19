@@ -53,7 +53,7 @@ services:
     depends_on:
       db-server:
         condition: service_healthy
-    entrypoint: [ "/startup-scripts/kc-entrypoint.sh", "start" ]
+    entrypoint: [ "/startup-scripts/kc-entrypoint.sh", "start-dev" ]
   redis:
     image: redis:6.2-alpine
     restart: always
