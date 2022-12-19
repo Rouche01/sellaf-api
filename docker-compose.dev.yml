@@ -33,13 +33,13 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     healthcheck:
       test: "exit 0" #further research on this
-  adminer:
-    image: adminer
-    depends_on:
-      - db-server
-    restart: always
-    ports:
-      - 8080:8080
+  # adminer:
+  #   image: adminer
+  #   depends_on:
+  #     - db-server
+  #   restart: always
+  #   ports:
+  #     - 8080:8080
   keycloak-server:
     image: auth-server
     build:
@@ -49,7 +49,7 @@ services:
     env_file:
       - ./.env.kc
     ports:
-      - "8082:8080"
+      - "8080:8080"
     depends_on:
       db-server:
         condition: service_healthy
