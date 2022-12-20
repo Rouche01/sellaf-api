@@ -109,7 +109,13 @@ jobs:
           envkey_KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
           envkey_KC_MASTER_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}
           envkey_KC_SELLAF_API_CLIENT_SECRET: ${{ secrets.KC_SELLAF_API_CLIENT_SECRET }}
-          envkey_KC_HTTPS_PROTOCOLS: ${{ secrets.KC_HTTPS_PROTOCOLS }}
+          envkey_KC_PROXY: ${{ secrets.KC_PROXY }}
+          envkey_KC_HEALTH_ENABLED: ${{ secrets.KC_HEALTH_ENABLED }}
+          envkey_KC_METRICS_ENABLED: ${{ secrets.KC_METRICS_ENABLED }}
+          envkey_KC_FEATURES: ${{ secrets.KC_FEATURES }}
+          envkey_KC_HOSTNAME_STRICT: ${{ secrets.KC_HOSTNAME_STRICT }}
+          envkey_KC_HTTP_ENABLED: ${{ secrets.KC_HTTP_ENABLED }}
+          envkey_KC_HOSTNAME: ${{ secrets.KC_HOSTNAME }}
           file_name: .env.kc
           fail_on_empty: false
 

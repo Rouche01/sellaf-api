@@ -41,10 +41,6 @@ services:
       - ./.env.kc
     ports:
       - "8080:8080"
-      - "8443:8443"
-    # volumes:
-    #   - ./certs/localhostcrt.pem:/opt/keycloak/conf/localhostcrt.pem
-    #   - ./certs/localhostkey.pem:/opt/keycloak/conf/localhostkey.pem
     depends_on:
       db-server:
         condition: service_healthy

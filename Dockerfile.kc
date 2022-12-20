@@ -23,4 +23,4 @@ COPY ./keycloak-scripts /startup-scripts
 
 RUN find /startup-scripts -type f -exec chmod 755 {} \;
 
-ENTRYPOINT [ "/startup-scripts/kc-entrypoint.sh", "start-dev" ]
+ENTRYPOINT [ "/startup-scripts/kc-entrypoint.sh", "start" ]
