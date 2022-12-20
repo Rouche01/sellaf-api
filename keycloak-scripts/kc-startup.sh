@@ -1,7 +1,7 @@
 function wait_for_keycloak() {
   local -r MAX_WAIT=60
   local curl_request
-  local host_url="keycloak-server:8888"
+  local host_url="keycloak-server:8080"
   local wait_time
 
   curl_request="curl -I -f -s ${host_url}"
