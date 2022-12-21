@@ -10,9 +10,10 @@ services:
     ports:
       - 4005:4005
     depends_on:
-      - db-server:
-          condition: service_healthy
-      - redis
+      db-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     platform: "linux/amd64"
   db-server:
     image: postgres:13-alpine
@@ -32,6 +33,8 @@ services:
     command: [ "redis-server", "--appendonly", "yes" ]
     volumes:
       - redis:/data
+    healthcheck:
+      test: "exit 0" #further research on this
 volumes:
   postgres_data:
   redis:
