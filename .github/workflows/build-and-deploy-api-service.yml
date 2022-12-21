@@ -1,1 +1,113 @@
 
+name: Build Image for API Service and Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-image:
+    name: Build and Push Docker Images to ECR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the files
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Log into Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag and push Sellaf API image to Amazon ECR
+        id: build-sellaf-api
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Log out of Amazon ECR
+        if: always()
+        run: docker logout ${{ steps.login-ecr.outputs.registry }}
+
+  deploy-to-ec2:
+    name: Set enviroment variables for all services and deploy services to ec2
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - name: Checkout the files
+        uses: actions/checkout@v3
+      - name: Make API service envfile
+        uses: SpicyPizza/create-envfile@v1.3
+        with:
+          envkey_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          envkey_PORT: ${{ secrets.PORT }}
+          envkey_NODE_ENV: ${{ secrets.NODE_ENV }}
+          envkey_APP_ENVIRONMENT: ${{ secrets.APP_ENVIRONMENT }}
+          envkey_KEYCLOAK_SERVER: ${{ secrets.KEYCLOAK_SERVER }}
+          envkey_KEYCLOAK_SERVER_REALM_NAME: ${{ secrets.KEYCLOAK_SERVER_REALM_NAME }}
+          envkey_KEYCLOAK_ADMIN_CLIENT_ID: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_ID }}
+          envkey_KEYCLOAK_ADMIN_CLIENT_SECRET: ${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}
+          envkey_KC_SELLAF_API_CLIENT_ID: ${{ secrets.KC_SELLAF_API_CLIENT_ID }}
+          envkey_KC_SELLAF_API_CLIENT_SECRET: ${{ secrets.KC_SELLAF_API_CLIENT_SECRET }}
+          envkey_SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          envkey_SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          envkey_SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          envkey_REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          envkey_REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          envkey_BCRYPT_TOKEN_SALT: ${{ secrets.BCRYPT_TOKEN_SALT }}
+          envkey_ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          envkey_ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          envkey_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          envkey_FLUTTERWAVE_API_BASE_URL: ${{ secrets.FLUTTERWAVE_API_BASE_URL }}
+          envkey_FLUTTERWAVE_PUBLIC_KEY: ${{ secrets.FLUTTERWAVE_PUBLIC_KEY }}
+          envkey_FLUTTERWAVE_SECRET_KEY: ${{ secrets.FLUTTERWAVE_SECRET_KEY }}
+          envkey_FLUTTERWAVE_ENCRYPTION_KEY: ${{ secrets.FLUTTERWAVE_ENCRYPTION_KEY }}
+          envkey_FLUTTERWAVE_TEST_PUBLIC_KEY: ${{ secrets.FLUTTERWAVE_TEST_PUBLIC_KEY }}
+          envkey_FLUTTERWAVE_TEST_SECRET_KEY: ${{ secrets.FLUTTERWAVE_TEST_SECRET_KEY }}
+          envkey_FLUTTERWAVE_TEST_ENCRYPTION_KEY: ${{ secrets.FLUTTERWAVE_TEST_ENCRYPTION_KEY }}
+          envkey_POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          envkey_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          envkey_IMAGE_VERSION: ${{ github.sha }}
+          file_name: .env
+          fail_on_empty: false
+
+      - name: Make DB envfile
+        uses: SpicyPizza/create-envfile@v1.3
+        with:
+          envkey_POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          envkey_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          envkey_POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          file_name: .env.db
+          fail_on_empty: false
+
+      - name: Deploy to my EC2 instance
+        uses: easingthemes/ssh-deploy@v3.0.0
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SOURCE: "./"
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: ${{ secrets.REMOTE_TARGET }}
+          EXCLUDE: "/dist/, /node_modules/, /src/, /test/"
+
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 022024849961.dkr.ecr.us-east-2.amazonaws.com
+            docker pull 022024849961.dkr.ecr.us-east-2.amazonaws.com/sellaf-api:${{ github.sha }}
+            IMAGE_VERSION=${{ github.sha }} docker-compose -f docker-compose.prod.yml up -d
+
