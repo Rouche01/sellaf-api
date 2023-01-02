@@ -118,7 +118,7 @@ export class KeycloakUserService {
   }
 
   async loginKeycloakUser(username: string, password: string) {
-    const loginUrl = `${this.appConfig.keycloakServer}/realms/Sellaf/protocol/openid-connect/token`;
+    const loginUrl = `${this.appConfig.keycloakServer}/realms/${this.appConfig.keycloakServerRealmName}/protocol/openid-connect/token`;
     const params = new url.URLSearchParams({
       username,
       password,
@@ -135,6 +135,33 @@ export class KeycloakUserService {
       );
 
       this.logger.log(`${username} logged into keycloak auth server`);
+      return response.data;
+    } catch (err) {
+      this.logger.error(err?.response?.data || err?.message);
+      if (err?.response?.data?.error_description) {
+        throw new BadRequestException(err.response.data.error_description);
+      }
+      throw new InternalServerErrorException(err?.message);
+    }
+  }
+
+  async refreshKcAccessToken(token: string) {
+    const authUrl = `${this.appConfig.keycloakServer}/realms/${this.appConfig.keycloakServerRealmName}/protocol/openid-connect/token`;
+    const params = new url.URLSearchParams({
+      client_secret: this.appConfig.kcSellafApiClientSecret,
+      client_id: this.appConfig.kcSellafApiClientId,
+      grant_type: 'refresh_token',
+      refresh_token: token,
+    });
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .post<KeycloakUserLoginResponse>(authUrl, params.toString())
+          .pipe(),
+      );
+
+      this.logger.log(`Token refreshed successfully.`);
       return response.data;
     } catch (err) {
       this.logger.error(err?.response?.data || err?.message);

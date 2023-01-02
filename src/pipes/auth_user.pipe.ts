@@ -18,6 +18,7 @@ export class AuthUserPipe implements PipeTransform {
         return {
           ...value,
           id: user.id,
+          firstName: user.firstName,
           ...(user?.seller && { sellerId: user.seller.id }),
           ...(user?.affiliate && { affiliateId: user.affiliate.id }),
         };

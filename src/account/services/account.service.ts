@@ -22,6 +22,7 @@ import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
   LoginDto,
+  RefreshTokenDto,
   ResetPasswordConfirmDto,
   ResetPasswordDto,
   SellerRegisterDto,
@@ -33,12 +34,17 @@ import {
   verifyConfirmationToken,
   encryptToken,
 } from '../utils';
-import { AffiliateRegisterContext } from '../interfaces';
+import {
+  AffiliateRegisterContext,
+  LoginResponse,
+  TransformedUser,
+} from '../interfaces';
 import { AppLoggerService } from 'src/app_logger';
-import { LoginResponse } from '../interfaces/login_response.interface';
+
 import { ConfigType } from '@nestjs/config';
 import { ResetTokenContext } from '../interfaces/reset_token_context.interface';
 import { AuthenticatedUser } from 'src/interfaces';
+import { transformUserResponse } from '../utils/transform_user_response.util';
 
 @Injectable()
 export class AccountService {
@@ -62,7 +68,7 @@ export class AccountService {
       lastName: dto.lastName,
     });
 
-    const confirmationToken = await generateConfirmationToken();
+    const confirmationToken = generateConfirmationToken();
     const encryptedToken = await encryptToken(
       +this.appConfig.bcryptTokenSalt,
       confirmationToken,
@@ -329,6 +335,20 @@ export class AccountService {
   async login(dto: LoginDto): Promise<LoginResponse> {
     const user = await this.prismaService.user.findUnique({
       where: { email: dto.email },
+      include: {
+        affiliate: {
+          select: {
+            affiliateCode: true,
+            id: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+          },
+        },
+        userRoles: true,
+      },
     });
     if (!user) {
       throw new BadRequestException('Wrong email or password');
@@ -340,6 +360,43 @@ export class AccountService {
     return {
       accessToken: kcLoginResp.access_token,
       refreshToken: kcLoginResp.refresh_token,
+      user: transformUserResponse(user),
+    };
+  }
+
+  async getUser(userId: number): Promise<{ user: TransformedUser }> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: {
+        affiliate: {
+          select: {
+            affiliateCode: true,
+            id: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+          },
+        },
+        userRoles: true,
+      },
+    });
+
+    return {
+      user: transformUserResponse(user),
+    };
+  }
+
+  async refreshAccessToken(dto: RefreshTokenDto) {
+    const { refreshToken } = dto;
+    const refreshResp = await this.keycloakUserService.refreshKcAccessToken(
+      refreshToken,
+    );
+
+    return {
+      accessToken: refreshResp.access_token,
+      refreshToken: refreshResp.refresh_token,
     };
   }
 
@@ -444,6 +501,59 @@ export class AccountService {
       this.logger.error(err?.message || 'Unable to reset password');
       throw new InternalServerErrorException(
         err?.message || 'Something went wrong',
+      );
+    }
+  }
+
+  async resendAffiliateVerificationLink(user: AuthenticatedUser) {
+    try {
+      await this.prismaService.confirmationToken.deleteMany({
+        where: { userId: user.id },
+      });
+
+      const confirmationToken = generateConfirmationToken();
+      const encryptedToken = await encryptToken(
+        +this.appConfig.bcryptTokenSalt,
+        confirmationToken,
+      );
+
+      await this.prismaService.confirmationToken.create({
+        data: {
+          expiresAt: add(new Date(), { hours: 24 }),
+          token: encryptedToken,
+          userId: user.id,
+        },
+      });
+
+      const verificationLink = encodeURI(
+        `http://localhost:4005/api/account/affiliate/verify?token=${confirmationToken}&email=${user.email}`,
+      );
+
+      const emailJobResp =
+        await this.emailService.addEmailJob<AffiliateRegisterContext>({
+          template: 'affiliate_verification',
+          contextObj: {
+            affiliateVerification: {
+              firstName: user.firstName,
+              email: user.email,
+              verificationLink,
+            },
+          },
+          recepient: user.email,
+          subject: 'Verify your Email',
+        });
+      this.logger.log({
+        emailJobSuccess: !!emailJobResp.failedReason,
+        failedReason: emailJobResp.failedReason,
+      });
+
+      return { userId: user.id, message: 'Verification link has been resent' };
+    } catch (err) {
+      this.logger.error(
+        err?.message || 'Something went wrong with resending verification link',
+      );
+      throw new InternalServerErrorException(
+        err?.message || 'Something went wrong with resending verification link',
       );
     }
   }

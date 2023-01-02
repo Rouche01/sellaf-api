@@ -24,4 +24,5 @@ export interface AuthenticatedUser {
   id?: number;
   sellerId?: number;
   affiliateId?: number;
+  firstName: string;
 }

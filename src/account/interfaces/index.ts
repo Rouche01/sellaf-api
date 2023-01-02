@@ -11,3 +11,4 @@ export {
   CreateKeycloakUserPayload,
 } from './create_keycloak_user_payload.interface';
 export { UserGroups, USER_GROUPS } from './user_groups.interface';
+export { LoginResponse, TransformedUser } from './login_response.interface';

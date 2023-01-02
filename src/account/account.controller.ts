@@ -1,34 +1,42 @@
-import { Body, Controller, Post, Get, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Query,
+  Res,
+  Inject,
+} from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import { Response } from 'express';
 import { AuthenticatedUser, Public, Roles } from 'nest-keycloak-connect';
+import { applicationConfig } from 'src/config';
 import { AuthenticatedUser as AuthenticatedUserType } from 'src/interfaces';
 import { AuthUserPipe } from 'src/pipes';
 import {
   AffiliateRegisterDto,
   AffiliateVerifyQueryDto,
   LoginDto,
+  LoginQueryDto,
+  RefreshTokenDto,
   ResetPasswordConfirmDto,
   ResetPasswordDto,
   SellerRegisterDto,
 } from './dtos';
-import { LoginResponse } from './interfaces/login_response.interface';
 import { AccountService } from './services';
+import { setAccessTokenCookie, setRefreshTokenCookie } from './utils';
 
 @Controller('account')
 export class AccountController {
-  constructor(private readonly accountService: AccountService) {}
+  constructor(
+    private readonly accountService: AccountService,
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
+  ) {}
 
   @Get('me')
   getMe(@AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType) {
-    return {
-      sub: user.sub,
-      id: user.id,
-      email: user.email,
-      sellerId: user.sellerId,
-      affiliateId: user.affiliateId,
-      roles: user.realm_access.roles,
-      emailVerified: user.email_verified,
-    };
+    return this.accountService.getUser(user.id);
   }
 
   @Public()
@@ -49,6 +57,14 @@ export class AccountController {
     return this.accountService.createSellerUser(dto, ['STORE_OWNER_GROUP']);
   }
 
+  @Post('/affiliate/verification-resend')
+  @Roles({ roles: ['realm:affiliate'] })
+  async resendAffiliateVerificationEmail(
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+  ): Promise<{ userId: number; message: string }> {
+    return this.accountService.resendAffiliateVerificationLink(user);
+  }
+
   @Public()
   @Get('/affiliate/verify')
   async verifyAffiliateEmail(
@@ -62,8 +78,35 @@ export class AccountController {
 
   @Public()
   @Post('/login')
-  async login(@Body() dto: LoginDto): Promise<LoginResponse> {
-    return this.accountService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: LoginQueryDto,
+  ): Promise<{ message: string }> {
+    const { accessToken, refreshToken, user } = await this.accountService.login(
+      dto,
+    );
+
+    setAccessTokenCookie(response, accessToken, this.appConfig.appEnvironment);
+    setRefreshTokenCookie(
+      response,
+      refreshToken,
+      this.appConfig.appEnvironment,
+    );
+
+    return {
+      message: 'User logged in successfully',
+      ...(query.include === 'user' && { user }),
+    };
+  }
+
+  @Public()
+  @Post('/refresh-token')
+  async refreshToken(@Body() dto: RefreshTokenDto) {
+    const { accessToken, refreshToken } =
+      await this.accountService.refreshAccessToken(dto);
+
+    return { accessToken, refreshToken };
   }
 
   @Post('password/reset/get')

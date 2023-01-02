@@ -1,5 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
+
 import { AppModule } from './app.module';
 import { AppLoggerService } from './app_logger';
 import { applicationConfig } from './config';
@@ -18,6 +20,11 @@ async function bootstrap() {
   );
   app.useLogger(app.get(AppLoggerService));
   const port = applicationConfig().port;
+  app.use(cookieParser());
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+    credentials: true,
+  });
   await app.listen(port);
   Logger.log(`🚀 Application is running on: ${port}`);
 }
