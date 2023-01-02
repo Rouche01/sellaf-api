@@ -5,11 +5,13 @@ export const setCookieOptions = (
   appEnvironment: string,
   maxAge?: number,
 ): CookieOptions => {
+  const isProduction = appEnvironment === 'production';
   return {
-    secure: appEnvironment === 'production',
+    secure: isProduction,
     sameSite: 'lax' as const,
     path: '/',
     maxAge: maxAge || 1000 * 60 * 60 * 24 * 100,
+    ...(isProduction && { domain: 'https://app.sellaf.africa' }),
     // domain: 'localhost:3000',
   };
 };
