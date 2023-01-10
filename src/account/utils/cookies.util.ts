@@ -11,7 +11,7 @@ export const setCookieOptions = (
     sameSite: 'lax' as const,
     path: '/',
     maxAge: maxAge || 1000 * 60 * 60 * 24 * 100,
-    ...(isProduction && { domain: 'https://app.sellaf.africa' }),
+    ...(isProduction && { domain: '.sellaf.africa' }),
     // domain: 'localhost:3000',
   };
 };
