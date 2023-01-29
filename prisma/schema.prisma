@@ -114,6 +114,11 @@ model Affiliate {
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
 
+  referredUsers Affiliate[]       @relation("ReferredAffiliates")
+
+  referredBy     Int?
+  referredByUser Affiliate? @relation("ReferredAffiliates", fields: [referredBy], references: [id])
+
   @@map("affiliate")
 }
 

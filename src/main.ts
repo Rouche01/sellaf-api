@@ -22,7 +22,7 @@ async function bootstrap() {
   const port = applicationConfig().port;
   app.use(cookieParser());
   app.enableCors({
-    origin: ['http://localhost:3000', 'https://app.sellaf.africa'],
+    origin: ['http://localhost:3001', 'https://app.sellaf.africa'],
     credentials: true,
   });
   await app.listen(port);

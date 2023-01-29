@@ -3,10 +3,12 @@ import { User, UserRole } from '@prisma/client';
 type UserResponse = User & {
   seller: {
     id: number;
+    active: boolean;
   };
   affiliate: {
     id: number;
     affiliateCode: string;
+    active: boolean;
   };
   userRoles: UserRole[];
 };
@@ -20,6 +22,7 @@ export const transformUserResponse = (user: UserResponse) => {
     lastName: user.lastName,
     userName: user.username,
     keycloakUserId: user.keycloakUserId,
+    verified: user.affiliate?.active || user.seller?.active,
     roles,
     ...(user.affiliate && { affiliateCode: user.affiliate.affiliateCode }),
   };

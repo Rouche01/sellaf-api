@@ -16,6 +16,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { PlatformSetupModule } from './platform_setup';
 import { StoreModule } from './store';
 import { PaymentModule } from './payment';
+import { UserModule } from './user';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { PaymentModule } from './payment';
     PlatformSetupModule,
     StoreModule,
     PaymentModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [

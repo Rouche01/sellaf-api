@@ -67,13 +67,11 @@ export class AccountController {
 
   @Public()
   @Get('/affiliate/verify')
-  async verifyAffiliateEmail(
-    @Query() query: AffiliateVerifyQueryDto,
-    @Res() res: Response,
-  ) {
+  async verifyAffiliateEmail(@Query() query: AffiliateVerifyQueryDto) {
     const { message, status } = await this.accountService.verifyAccount(query);
+    console.log(message);
     // TO-DO: replace the base url to the user dashboard
-    res.redirect(`http://localhost:3000?message=${message}&status=${status}`);
+    return { message, status };
   }
 
   @Public()

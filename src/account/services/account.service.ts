@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Inject,
   Injectable,
-  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import add from 'date-fns/add';
@@ -45,6 +44,7 @@ import { ConfigType } from '@nestjs/config';
 import { ResetTokenContext } from '../interfaces/reset_token_context.interface';
 import { AuthenticatedUser } from 'src/interfaces';
 import { transformUserResponse } from '../utils/transform_user_response.util';
+import { Affiliate } from '@prisma/client';
 
 @Injectable()
 export class AccountService {
@@ -85,6 +85,14 @@ export class AccountService {
       username,
       userAttrs: keycloakAttrs,
     });
+
+    let referredBy: Affiliate;
+
+    if (dto.referrerId) {
+      referredBy = await this.prismaService.affiliate.findFirst({
+        where: { affiliateCode: dto.referrerId },
+      });
+    }
     try {
       const user = await this.prismaService.user.create({
         data: {
@@ -97,6 +105,7 @@ export class AccountService {
             create: {
               phoneNumber: dto.phoneNumber,
               affiliateCode: affiliateId,
+              ...(referredBy && { referredBy: referredBy.id }),
             },
           },
           userRoles: {
@@ -112,7 +121,7 @@ export class AccountService {
       });
 
       const verificationLink = encodeURI(
-        `http://localhost:4005/api/account/affiliate/verify?token=${confirmationToken}&email=${dto.email}`,
+        `http://localhost:3001/account/verify?token=${confirmationToken}&email=${dto.email}`,
       );
 
       const emailJobResp =
@@ -137,9 +146,7 @@ export class AccountService {
       this.logger.error(
         err?.message || 'Something went wrong with creating an affiliate',
       );
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong with creating an affiliate',
-      );
+      throw err;
     }
   }
 
@@ -215,9 +222,7 @@ export class AccountService {
       this.logger.error(
         err?.message || 'Something went wrong creating an affiliate account',
       );
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong creating an affiliate account',
-      );
+      throw err;
     }
   }
 
@@ -259,7 +264,7 @@ export class AccountService {
       this.logger.error(
         err?.message || 'Unable to create platform manager account',
       );
-      throw new Error('Unable to create platform manager account');
+      throw err;
     }
   }
 
@@ -284,18 +289,16 @@ export class AccountService {
         });
 
       if (!confirmationToken) {
-        return {
-          message: 'Verification link is not correct, request for a new one',
-          status: 'failed',
-        };
+        throw new BadRequestException(
+          'Verification link is not correct, request for a new one',
+        );
       }
 
       const tokenExpired = isTokenExpired(confirmationToken);
       if (tokenExpired) {
-        return {
-          message: 'Verification link is expired, request for a new one',
-          status: 'failed',
-        };
+        throw new BadRequestException(
+          'Verification link is expired, request for a new one',
+        );
       }
 
       const tokenIsValid = await verifyConfirmationToken(
@@ -304,10 +307,9 @@ export class AccountService {
       );
 
       if (!tokenIsValid) {
-        return {
-          message: 'Verification link is invalid, request for a new one',
-          status: 'failed',
-        };
+        throw new BadRequestException(
+          'Verification link is invalid, request for a new one',
+        );
       }
 
       await this.keycloakUserService.updateKeycloakUser(user.keycloakUserId, {
@@ -323,12 +325,7 @@ export class AccountService {
       };
     } catch (err) {
       this.logger.error(err?.message);
-      return {
-        message:
-          err?.message ||
-          'Something went wrong with the verification, resend verfication link',
-        status: 'failed',
-      };
+      throw err;
     }
   }
 
@@ -340,11 +337,13 @@ export class AccountService {
           select: {
             affiliateCode: true,
             id: true,
+            active: true,
           },
         },
         seller: {
           select: {
             id: true,
+            active: true,
           },
         },
         userRoles: true,
@@ -372,11 +371,13 @@ export class AccountService {
           select: {
             affiliateCode: true,
             id: true,
+            active: true,
           },
         },
         seller: {
           select: {
             id: true,
+            active: true,
           },
         },
         userRoles: true,
@@ -449,9 +450,7 @@ export class AccountService {
       return { message: 'Password reset token has been sent to your email' };
     } catch (err) {
       this.logger.error(err?.message || 'Something went wrong');
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
+      throw err;
     }
   }
 
@@ -499,9 +498,7 @@ export class AccountService {
       return { message: 'Password reset successful' };
     } catch (err) {
       this.logger.error(err?.message || 'Unable to reset password');
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
+      throw err;
     }
   }
 
@@ -526,7 +523,7 @@ export class AccountService {
       });
 
       const verificationLink = encodeURI(
-        `http://localhost:4005/api/account/affiliate/verify?token=${confirmationToken}&email=${user.email}`,
+        `http://localhost:3001/account/verify?token=${confirmationToken}&email=${user.email}`,
       );
 
       const emailJobResp =
@@ -552,9 +549,7 @@ export class AccountService {
       this.logger.error(
         err?.message || 'Something went wrong with resending verification link',
       );
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong with resending verification link',
-      );
+      throw err;
     }
   }
 }
