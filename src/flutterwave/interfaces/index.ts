@@ -1,2 +1,2 @@
-export { PayWithCardPayload } from './pay_with_card_payload.interface';
-export { PayWithCardResponse } from './pay_with_card_response.interface';
+export { PayWithStandardFlowPayload } from './pay_with_standard_flow_payload.interface';
+export { PayWithStandardFlowResponse } from './pay_with_standard_flow_response.interface';

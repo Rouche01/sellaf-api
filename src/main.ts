@@ -16,6 +16,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       exceptionFactory: badRequestExceptionFilter,
+      transform: true,
     }),
   );
   app.useLogger(app.get(AppLoggerService));

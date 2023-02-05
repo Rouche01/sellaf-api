@@ -7,3 +7,8 @@ export const generateAffiliateId = (): string => {
   const nanoId = nanoid.customAlphabet(CUSTOM_ALPHABET, 11);
   return `SLFA-${nanoId()}`;
 };
+
+export const generateTransactionRef = (): string => {
+  const nanoId = nanoid.customAlphabet(CUSTOM_ALPHABET, 15);
+  return `SELLAF-${nanoId()}`;
+};

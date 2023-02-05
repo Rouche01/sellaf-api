@@ -33,7 +33,7 @@ enum Country {
 }
 
 enum TransactionType {
-  AFFILIATE_SUBSCRIPTION
+  SUBSCRIPTION
   PRODUCT_PURCHASE
   STORE_WITHDRAWAL
   AFFILIATE_WITHDRAWAL
@@ -42,6 +42,10 @@ enum TransactionType {
 enum ChargeType {
   DEBIT
   CREDIT
+}
+
+enum SubscriptionPlan {
+  AFFILIATE_DEFAULT
 }
 
 model UserRole {
@@ -101,10 +105,11 @@ model Affiliate {
 
   phoneNumber     String
   affiliateCode   String
-  totalEarnings   Decimal @default(0) @db.Decimal(25, 2)
-  amountWithdrawn Decimal @default(0) @db.Decimal(25, 2)
-  balance         Decimal @default(0) @db.Decimal(25, 2)
-  active          Boolean @default(false)
+  totalEarnings   Decimal          @default(0) @db.Decimal(25, 2)
+  amountWithdrawn Decimal          @default(0) @db.Decimal(25, 2)
+  balance         Decimal          @default(0) @db.Decimal(25, 2)
+  active          Boolean          @default(false)
+  plan            SubscriptionPlan @default(AFFILIATE_DEFAULT)
 
   bankName      String?
   accountNumber String?
@@ -114,10 +119,12 @@ model Affiliate {
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
 
-  referredUsers Affiliate[]       @relation("ReferredAffiliates")
+  referredUsers Affiliate[] @relation("ReferredAffiliates")
 
   referredBy     Int?
   referredByUser Affiliate? @relation("ReferredAffiliates", fields: [referredBy], references: [id])
+
+  subscriptions Subscription[]
 
   @@map("affiliate")
 }
@@ -186,6 +193,8 @@ model Transaction {
   productId Int?
   product   Product? @relation(fields: [productId], references: [id])
 
+  subscriptions Subscription?
+
   @@map("transaction")
 }
 
@@ -201,4 +210,23 @@ model Product {
   transactions Transaction[]
 
   @@map("product")
+}
+
+model Subscription {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  startDate DateTime @default(now())
+  endDate   DateTime @default(now())
+  active    Boolean
+  willRenew Boolean  @default(false)
+
+  affiliateId Int       @unique
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+
+  transactionId Int?         @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@map("subscription")
 }

@@ -1,8 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { AuthUserPipe } from 'src/pipes';
 import { UserService } from './services';
 import { AuthenticatedUser as AuthenticatedUserType } from 'src/interfaces';
+import { AffiliateReferralResponse } from './interfaces';
+import { GetAffiliateReferralsQueryDto } from './dtos/get_affiliate_referrals_query.dto';
 
 @Controller('user')
 export class UserController {
@@ -12,10 +14,11 @@ export class UserController {
   @Get('affiliate/referrals')
   async getAffiliateReferrals(
     @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
-  ) {
-    const referredUsers = await this.userService.fetchAffiliateReferredUsers(
+    @Query() query: GetAffiliateReferralsQueryDto,
+  ): Promise<AffiliateReferralResponse> {
+    return this.userService.fetchAffiliateReferredUsers(
       user.affiliateId,
+      query,
     );
-    return referredUsers;
   }
 }

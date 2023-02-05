@@ -17,6 +17,7 @@ import { PlatformSetupModule } from './platform_setup';
 import { StoreModule } from './store';
 import { PaymentModule } from './payment';
 import { UserModule } from './user';
+import { SubscriptionModule } from './subscription';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { UserModule } from './user';
     StoreModule,
     PaymentModule,
     UserModule,
+    SubscriptionModule,
   ],
   controllers: [AppController],
   providers: [

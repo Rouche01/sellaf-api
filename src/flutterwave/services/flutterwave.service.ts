@@ -7,7 +7,10 @@ import {
   FlwBank,
   ResolveAccountResponse,
 } from 'src/interfaces';
-import { PayWithCardPayload, PayWithCardResponse } from '../interfaces';
+import {
+  PayWithStandardFlowPayload,
+  PayWithStandardFlowResponse,
+} from '../interfaces';
 
 @Injectable()
 export class FlutterwaveService {
@@ -23,9 +26,7 @@ export class FlutterwaveService {
       return response.data.data;
     } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
+      throw err;
     }
   }
 
@@ -50,9 +51,7 @@ export class FlutterwaveService {
     } catch (err) {
       console.log(err?.response);
       this.logger.error(err?.response?.data || err?.message);
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
+      throw err;
     }
   }
 
@@ -81,77 +80,61 @@ export class FlutterwaveService {
       };
     } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
+      throw err;
     }
   }
 
-  async payWithCard({
-    amount,
-    cardNumber,
-    currency,
-    cvv,
-    email,
-    expiryMonth,
-    expiryYear,
-    fullName,
-    txRef,
-  }: PayWithCardPayload) {
+  async payWithStandardFlow(paymentPayload: PayWithStandardFlowPayload) {
     try {
       const response = await lastValueFrom(
         this.httpService
-          .post<PayWithCardResponse>('/charges?type=card', {
-            card_number: cardNumber,
-            cvv,
-            expiry_month: expiryMonth,
-            expiry_year: expiryYear,
-            currency,
-            amount,
-            fullname: fullName,
-            email,
-            tx_ref: txRef,
-          })
-          .pipe(),
-      );
-      return {
-        flwRef: response.data.data.flw_ref,
-        txRef: response.data.data.tx_ref,
-        message: response.data.data.processor_response,
-        status: response.data.data.status,
-      };
-    } catch (err) {
-      this.logger.error(err?.response?.data || err?.message);
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
-    }
-  }
-
-  async validateCardPayment(otp: string, flwRef: string) {
-    try {
-      const response = await lastValueFrom(
-        this.httpService
-          .post<PayWithCardResponse>('/validate-charge', {
-            otp,
-            flw_ref: flwRef,
-            type: 'card',
+          .post<PayWithStandardFlowResponse>('/payments', {
+            ...paymentPayload,
+            customizations: {
+              title: 'Sellaf Affiliate Subscription',
+              logo: 'https://sellaf.africa/logo.png',
+            },
           })
           .pipe(),
       );
 
+      if (!response.data.data.link) {
+        throw new InternalServerErrorException(
+          'Something went wrong with initiating payment, try again',
+        );
+      }
+
       return {
-        flwRef: response.data.data.flw_ref,
-        txRef: response.data.data.tx_ref,
-        status: response.data.data.status,
+        status: response.data.status,
+        paymentLink: response.data.data.link,
       };
     } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
+      throw err;
     }
   }
+
+  // async validateCardPayment(otp: string, flwRef: string) {
+  //   try {
+  //     const response = await lastValueFrom(
+  //       this.httpService
+  //         .post<PayWithStandardFlowResponse>('/validate-charge', {
+  //           otp,
+  //           flw_ref: flwRef,
+  //           type: 'card',
+  //         })
+  //         .pipe(),
+  //     );
+
+  //     return {
+  //       status: response.data.status,
+  //       paymentLink: response.data.data.link,
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(err?.response?.data || err?.message);
+  //     throw err;
+  //   }
+  // }
 
   // async payViaBankTransfer() {}
 }

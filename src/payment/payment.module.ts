@@ -7,5 +7,6 @@ import { PaymentService } from './services';
   providers: [PaymentService],
   imports: [FlutterwaveModule],
   controllers: [PaymentController],
+  exports: [PaymentService],
 })
 export class PaymentModule {}

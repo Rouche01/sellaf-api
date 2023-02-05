@@ -3,7 +3,10 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { Currency, SubscriptionPlan } from '@prisma/client';
+import { generateTransactionRef } from 'src/account/utils';
 import { AppLoggerService } from 'src/app_logger';
+import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
 import { AuthenticatedUser, Country, FlwBank } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
@@ -87,5 +90,33 @@ export class PaymentService {
         err?.message || 'Something went wrong',
       );
     }
+  }
+
+  async payWithFlutterwave(
+    user: AuthenticatedUser,
+    paymentMeta: Record<string, any>,
+    amount: string,
+    subscriptionPlan?: SubscriptionPlan,
+  ) {
+    const transactionRef = generateTransactionRef();
+
+    const payload = {
+      tx_ref: transactionRef,
+      amount,
+      currency: Currency.NGN,
+      redirect_url: 'http://localhost:3001/overview',
+      customer: {
+        email: user.email,
+        name: `${user.firstName} ${user.family_name}`,
+      },
+      meta: paymentMeta,
+      payment_options: 'card, account, banktransfer, mpesa',
+      ...(subscriptionPlan && {
+        payment_plan:
+          subscriptionPlanConfig[subscriptionPlan].flutterwavePlanId,
+      }),
+    };
+
+    return this.flutterwaveService.payWithStandardFlow(payload);
   }
 }
