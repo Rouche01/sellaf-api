@@ -48,6 +48,13 @@ enum SubscriptionPlan {
   AFFILIATE_DEFAULT
 }
 
+enum TransactionStatus {
+  initiated
+  success
+  failed
+  pending
+}
+
 model UserRole {
   userId Int
   user   User @relation(fields: [userId], references: [id])
@@ -174,12 +181,12 @@ model Transaction {
 
   type           TransactionType
   chargeType     ChargeType
-  successful     Boolean         @default(false)
+  status         TransactionStatus @default(initiated)
   flutterwaveRef String?
   coinbaseRef    String?
   referenceCode  String
   address        String?
-  amount         Decimal         @db.Decimal(15, 2)
+  amount         Decimal           @db.Decimal(15, 2)
 
   initiatedBy     Int
   initiatedByUser User @relation("InitiatedTransactions", fields: [initiatedBy], references: [id])
@@ -193,7 +200,7 @@ model Transaction {
   productId Int?
   product   Product? @relation(fields: [productId], references: [id])
 
-  subscriptions Subscription?
+  subscription Subscription?
 
   @@map("transaction")
 }
@@ -218,15 +225,15 @@ model Subscription {
   updatedAt DateTime @default(now())
 
   startDate DateTime @default(now())
-  endDate   DateTime @default(now())
-  active    Boolean
+  endDate   DateTime @default(dbgenerated("NOW() + interval '1 year'"))
+  active    Boolean  @default(false)
   willRenew Boolean  @default(false)
 
   affiliateId Int       @unique
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
 
-  transactionId Int?         @unique
-  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  transactionId Int         @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
 
   @@map("subscription")
 }

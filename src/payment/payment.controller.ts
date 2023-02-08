@@ -10,6 +10,8 @@ import {
   AddBankQueryDto,
   ConfirmBankAccountDto,
   GetBanksQueryDto,
+  VerifyTransactionQueryDto,
+  WebhookDto,
 } from './dtos';
 import { PaymentService } from './services';
 
@@ -50,5 +52,17 @@ export class PaymentController {
     @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
   ): Promise<{ status: string; message: string }> {
     return this.paymentService.addBankAccount(dto, query, user);
+  }
+
+  @Get('transactions/verify')
+  async verifyTransaction(@Query() query: VerifyTransactionQueryDto) {
+    return this.paymentService.verifyTransaction(query);
+  }
+
+  @Public()
+  @Post('/webhook')
+  async paymentWebhook(@Body() dto: WebhookDto) {
+    console.log('inside webhook');
+    return this.paymentService.useWebhook(dto);
   }
 }

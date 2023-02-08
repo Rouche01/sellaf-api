@@ -3,14 +3,33 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Currency, SubscriptionPlan } from '@prisma/client';
+import {
+  Currency,
+  SubscriptionPlan,
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+  Subscription,
+} from '@prisma/client';
 import { generateTransactionRef } from 'src/account/utils';
 import { AppLoggerService } from 'src/app_logger';
 import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
 import { AuthenticatedUser, Country, FlwBank } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
-import { AddBankDto, AddBankQueryDto, ConfirmBankAccountDto } from '../dtos';
+import {
+  AddBankDto,
+  AddBankQueryDto,
+  ConfirmBankAccountDto,
+  VerifyTransactionQueryDto,
+  WebhookDto,
+  WebhookEvent,
+} from '../dtos';
+import { CreateNewTransactionPayload } from '../interfaces';
+
+type TransactionWithSubscription = Transaction & {
+  subscription: Subscription;
+};
 
 @Injectable()
 export class PaymentService {
@@ -96,15 +115,25 @@ export class PaymentService {
     user: AuthenticatedUser,
     paymentMeta: Record<string, any>,
     amount: string,
+    transactionType: TransactionType,
     subscriptionPlan?: SubscriptionPlan,
   ) {
     const transactionRef = generateTransactionRef();
+
+    let referredById: number;
+
+    if (transactionType === 'SUBSCRIPTION') {
+      const affiliateUser = await this.prismaService.affiliate.findUnique({
+        where: { id: user.affiliateId },
+      });
+      referredById = affiliateUser.referredBy;
+    }
 
     const payload = {
       tx_ref: transactionRef,
       amount,
       currency: Currency.NGN,
-      redirect_url: 'http://localhost:3001/overview',
+      redirect_url: 'http://localhost:3000/overview',
       customer: {
         email: user.email,
         name: `${user.firstName} ${user.family_name}`,
@@ -117,6 +146,122 @@ export class PaymentService {
       }),
     };
 
-    return this.flutterwaveService.payWithStandardFlow(payload);
+    const paymentRedirectRes =
+      await this.flutterwaveService.payWithStandardFlow(payload);
+
+    const transaction = await this.createNewTransaction({
+      amount: +amount,
+      chargeType: 'DEBIT',
+      initiatedBy: user.id,
+      referenceCode: transactionRef,
+      type: transactionType,
+      referredBy: referredById,
+    });
+
+    return { transactionId: transaction.id, ...paymentRedirectRes };
+  }
+
+  async verifyTransaction(dto: VerifyTransactionQueryDto) {
+    const { data } = await this.flutterwaveService.verifyTransaction(
+      dto.transactionId,
+    );
+
+    const transaction = await this.prismaService.transaction.findFirst({
+      where: { referenceCode: dto.transactionRef },
+      include: { subscription: true },
+    });
+
+    if (data.status === 'successful') {
+      if (
+        data.amount === dto.expectedAmount &&
+        data.currency === dto.transactionCurrency
+      ) {
+        await this.updateTransactionStatus(transaction, 'success');
+        await this.activateSubscription(transaction);
+        return {
+          status: 'successful',
+          message: 'Payment was successful',
+        };
+      } else {
+        await this.updateTransactionStatus(transaction, 'success');
+        await this.activateSubscription(transaction);
+        return {
+          status: 'successful-with-clarification',
+          message:
+            'Payment was successful with some clarification needed, please reach out to our customer support',
+        };
+      }
+    } else {
+      await this.updateTransactionStatus(
+        transaction,
+        data.status as TransactionStatus,
+      );
+      return {
+        status: data.status,
+        message: `Payment is ${data.status}`,
+      };
+    }
+  }
+
+  async useWebhook(dto: WebhookDto) {
+    const transaction = await this.prismaService.transaction.findFirst({
+      where: { referenceCode: dto.data.tx_ref },
+      include: { subscription: true },
+    });
+    if (dto.event === 'charge.completed') {
+      this.logger.log(
+        `Charge completed webhook event received for ${dto.data.tx_ref} transaction`,
+      );
+
+      if (dto.data.status.toLocaleLowerCase() === 'successful') {
+        await this.updateTransactionStatus(transaction, 'success');
+        await this.activateSubscription(transaction);
+        this.logger.log(`Payment was successful`);
+      }
+
+      if (dto.data.status.toLocaleLowerCase() === 'failed') {
+        await this.updateTransactionStatus(transaction, 'failed');
+        this.logger.log(`Payment failed`);
+      }
+    }
+  }
+
+  private async createNewTransaction(payload: CreateNewTransactionPayload) {
+    const transaction = await this.prismaService.transaction.create({
+      data: {
+        amount: payload.amount,
+        chargeType: payload.chargeType,
+        referenceCode: payload.referenceCode,
+        type: payload.type,
+        address: payload.address,
+        coinbaseRef: payload.coinbaseRef,
+        flutterwaveRef: payload.flutterwaveRef,
+        initiatedBy: payload.initiatedBy,
+        referredBy: payload.referredBy,
+      },
+    });
+
+    return transaction;
+  }
+
+  private async updateTransactionStatus(
+    transaction: Transaction,
+    status: TransactionStatus,
+  ) {
+    if (transaction.status !== status) {
+      await this.prismaService.transaction.update({
+        data: { status: status },
+        where: { id: transaction.id },
+      });
+    }
+  }
+
+  private async activateSubscription(transaction: TransactionWithSubscription) {
+    if (transaction.subscription && !transaction.subscription.active) {
+      await this.prismaService.subscription.update({
+        where: { id: transaction.subscription.id },
+        data: { active: true, willRenew: true },
+      });
+    }
   }
 }

@@ -10,6 +10,7 @@ import {
 import {
   PayWithStandardFlowPayload,
   PayWithStandardFlowResponse,
+  VerifyTransactionResponse,
 } from '../interfaces';
 
 @Injectable()
@@ -98,7 +99,7 @@ export class FlutterwaveService {
           .pipe(),
       );
 
-      if (!response.data.data.link) {
+      if (!response.data?.data?.link) {
         throw new InternalServerErrorException(
           'Something went wrong with initiating payment, try again',
         );
@@ -108,6 +109,23 @@ export class FlutterwaveService {
         status: response.data.status,
         paymentLink: response.data.data.link,
       };
+    } catch (err) {
+      this.logger.error(err?.response?.data || err?.message);
+      throw err;
+    }
+  }
+
+  async verifyTransaction(transactionId: string) {
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .get<VerifyTransactionResponse>(
+            `/transactions/${transactionId}/verify`,
+          )
+          .pipe(),
+      );
+
+      return response.data;
     } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
       throw err;

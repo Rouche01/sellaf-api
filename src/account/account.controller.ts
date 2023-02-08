@@ -69,7 +69,6 @@ export class AccountController {
   @Get('/affiliate/verify')
   async verifyAffiliateEmail(@Query() query: AffiliateVerifyQueryDto) {
     const { message, status } = await this.accountService.verifyAccount(query);
-    console.log(message);
     // TO-DO: replace the base url to the user dashboard
     return { message, status };
   }

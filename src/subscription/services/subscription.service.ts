@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SubscriptionPlan } from '@prisma/client';
+import { SubscriptionPlan, TransactionType } from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
 import { subscriptionPlanConfig } from 'src/constants';
 import { AuthenticatedUser } from 'src/interfaces';
@@ -24,15 +24,20 @@ export class SubscriptionService {
         affiliateId: affiliate.affiliateCode,
       };
 
-      const paymentResponse = await this.paymentService.payWithFlutterwave(
-        user,
-        paymentMeta,
-        subscriptionPlanConfig[affiliate.plan].planAmount,
-        SubscriptionPlan.AFFILIATE_DEFAULT,
-      );
+      const { paymentLink, status, transactionId } =
+        await this.paymentService.payWithFlutterwave(
+          user,
+          paymentMeta,
+          subscriptionPlanConfig[affiliate.plan].planAmount,
+          TransactionType.SUBSCRIPTION,
+          SubscriptionPlan.AFFILIATE_DEFAULT,
+        );
 
-      console.log(paymentResponse);
-      return paymentResponse;
+      await this.prismaService.subscription.create({
+        data: { affiliateId: user.affiliateId, transactionId },
+      });
+
+      return { paymentLink, status };
     } catch (err) {
       this.logger.error(err?.message || 'Something went wrong');
       throw err;
