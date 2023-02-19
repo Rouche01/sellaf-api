@@ -55,6 +55,11 @@ enum TransactionStatus {
   pending
 }
 
+enum PaymentProcessor {
+  FLUTTERWAVE
+  COINBASE
+}
+
 model UserRole {
   userId Int
   user   User @relation(fields: [userId], references: [id])
@@ -179,14 +184,13 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type           TransactionType
-  chargeType     ChargeType
-  status         TransactionStatus @default(initiated)
-  flutterwaveRef String?
-  coinbaseRef    String?
-  referenceCode  String
-  address        String?
-  amount         Decimal           @db.Decimal(15, 2)
+  type                TransactionType
+  chargeType          ChargeType
+  status              TransactionStatus          @default(initiated)
+  paymentProcessorRef PaymentProcessorReference?
+  referenceCode       String
+  address             String?
+  amount              Decimal                    @db.Decimal(15, 2)
 
   initiatedBy     Int
   initiatedByUser User @relation("InitiatedTransactions", fields: [initiatedBy], references: [id])
@@ -203,6 +207,18 @@ model Transaction {
   subscription Subscription?
 
   @@map("transaction")
+}
+
+model PaymentProcessorReference {
+  id            Int              @id @default(autoincrement())
+  trxId         String?
+  referenceCode String?
+  type          PaymentProcessor
+
+  transactionId Int         @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  @@map("payment_processor_reference")
 }
 
 model Product {
@@ -225,7 +241,7 @@ model Subscription {
   updatedAt DateTime @default(now())
 
   startDate DateTime @default(now())
-  endDate   DateTime @default(dbgenerated("NOW() + interval '1 year'"))
+  endDate   DateTime
   active    Boolean  @default(false)
   willRenew Boolean  @default(false)
 

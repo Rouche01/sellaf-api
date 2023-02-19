@@ -28,4 +28,5 @@ export const applicationConfig = registerAs('application', () => ({
     testSecretKey: process.env.FLUTTERWAVE_TEST_SECRET_KEY,
     testEncryptionKey: process.env.FLUTTERWAVE_TEST_ENCRYPTION_KEY,
   },
+  frontendUrl: process.env.FRONTEND_URL,
 }));

@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { add } from 'date-fns';
 import { SubscriptionPlan, TransactionType } from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
 import { subscriptionPlanConfig } from 'src/constants';
@@ -34,7 +39,11 @@ export class SubscriptionService {
         );
 
       await this.prismaService.subscription.create({
-        data: { affiliateId: user.affiliateId, transactionId },
+        data: {
+          affiliateId: user.affiliateId,
+          transactionId,
+          endDate: add(new Date(), { years: 1 }),
+        },
       });
 
       return { paymentLink, status };
@@ -43,4 +52,59 @@ export class SubscriptionService {
       throw err;
     }
   }
+
+  async getAffiliateActiveSubscription(user: AuthenticatedUser) {
+    const subscription = await this.prismaService.subscription.findFirst({
+      where: { active: true, affiliateId: user.affiliateId },
+    });
+
+    if (subscription) {
+      return subscription;
+    } else {
+      return null;
+    }
+  }
+
+  async cancelAffiliateActiveSubscription(
+    subId: number,
+    user: AuthenticatedUser,
+  ) {
+    try {
+      const subscription = await this.prismaService.subscription.findFirst({
+        where: { id: subId, affiliateId: user.affiliateId },
+        include: { transaction: { include: { paymentProcessorRef: true } } },
+      });
+
+      if (!subscription.active || !subscription.willRenew) {
+        throw new BadRequestException("You can't cancel inactive subscription");
+      }
+
+      if (!subscription) {
+        throw new NotFoundException('Subscription not found');
+      }
+
+      // pass the transaction id of the payment processor
+      await this.paymentService.cancelPaymentSubscription(
+        subscription.transaction.paymentProcessorRef.trxId,
+      );
+
+      await this.prismaService.subscription.update({
+        where: { id: subscription.id },
+        data: { willRenew: false },
+      });
+
+      return {
+        status: 'success',
+        message:
+          'Subscription cancelled, you will still enjoy your current access until your active subscription expires',
+      };
+    } catch (err) {
+      this.logger.error(
+        err?.message || 'Something went wrong cancelling active subscription.',
+      );
+      throw err;
+    }
+  }
+
+  // renewSubscription(subId: number, user: AuthenticatedUser) {}
 }

@@ -14,3 +14,4 @@ export {
   setAccessTokenCookie,
   setRefreshTokenCookie,
 } from './cookies.util';
+export { constructVerificationLink } from './construct_verification_link.util';

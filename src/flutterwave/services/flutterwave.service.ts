@@ -8,10 +8,12 @@ import {
   ResolveAccountResponse,
 } from 'src/interfaces';
 import {
+  GetSubscriptionResponseInterface,
   PayWithStandardFlowPayload,
   PayWithStandardFlowResponse,
   VerifyTransactionResponse,
 } from '../interfaces';
+import { DeactivateSubscriptionResponse } from '../interfaces/deactivate_subscription_response.interface';
 
 @Injectable()
 export class FlutterwaveService {
@@ -128,6 +130,56 @@ export class FlutterwaveService {
       return response.data;
     } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
+      throw err;
+    }
+  }
+
+  async getSubscriptionByTrxId(transactionId: string) {
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .get<GetSubscriptionResponseInterface>(
+            `/subscriptions?transaction_id=${transactionId}`,
+          )
+          .pipe(),
+      );
+
+      return response.data.data;
+    } catch (err) {
+      console.log('here get');
+      this.logger.error(
+        err?.response?.data ||
+          err?.message ||
+          'Something went wrong fetching flutterwave subscriptions',
+      );
+      throw err;
+    }
+  }
+
+  async deactivateActiveSubscription(subId: number) {
+    console.log(subId);
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .put<DeactivateSubscriptionResponse>(
+            `/subscriptions/${subId}/cancel`,
+            {},
+            { headers: { 'Content-Type': 'application/json' } },
+          )
+          .pipe(),
+      );
+
+      console.log(response);
+
+      // return response.data;
+    } catch (err) {
+      console.log('here cancel');
+      console.log(err?.response);
+      this.logger.error(
+        err?.response?.data ||
+          err?.message ||
+          'Something went wrong deactivating flutterwave subscription',
+      );
       throw err;
     }
   }

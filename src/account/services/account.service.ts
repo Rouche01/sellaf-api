@@ -13,6 +13,7 @@ import {
 } from '../interfaces';
 import { PrismaService } from 'src/prisma';
 import {
+  constructVerificationLink,
   generateAffiliateId,
   generateUniqueUsername,
   isTokenExpired,
@@ -33,11 +34,7 @@ import {
   verifyConfirmationToken,
   encryptToken,
 } from '../utils';
-import {
-  AffiliateRegisterContext,
-  LoginResponse,
-  TransformedUser,
-} from '../interfaces';
+import { AffiliateRegisterContext, LoginResponse } from '../interfaces';
 import { AppLoggerService } from 'src/app_logger';
 
 import { ConfigType } from '@nestjs/config';
@@ -120,10 +117,6 @@ export class AccountService {
         },
       });
 
-      const verificationLink = encodeURI(
-        `http://localhost:3001/account/verify?token=${confirmationToken}&email=${dto.email}`,
-      );
-
       const emailJobResp =
         await this.emailService.addEmailJob<AffiliateRegisterContext>({
           template: 'affiliate_verification',
@@ -131,7 +124,11 @@ export class AccountService {
             affiliateVerification: {
               firstName: dto.firstName,
               email: dto.email,
-              verificationLink,
+              verificationLink: constructVerificationLink(
+                this.appConfig.frontendUrl,
+                confirmationToken,
+                dto.email,
+              ),
             },
           },
           recepient: dto.email,
@@ -338,12 +335,16 @@ export class AccountService {
             affiliateCode: true,
             id: true,
             active: true,
+            phoneNumber: true,
           },
         },
         seller: {
           select: {
             id: true,
             active: true,
+            businessName: true,
+            address: true,
+            phoneNumber: true,
           },
         },
         userRoles: true,
@@ -359,32 +360,6 @@ export class AccountService {
     return {
       accessToken: kcLoginResp.access_token,
       refreshToken: kcLoginResp.refresh_token,
-      user: transformUserResponse(user),
-    };
-  }
-
-  async getUser(userId: number): Promise<{ user: TransformedUser }> {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      include: {
-        affiliate: {
-          select: {
-            affiliateCode: true,
-            id: true,
-            active: true,
-          },
-        },
-        seller: {
-          select: {
-            id: true,
-            active: true,
-          },
-        },
-        userRoles: true,
-      },
-    });
-
-    return {
       user: transformUserResponse(user),
     };
   }
@@ -522,10 +497,6 @@ export class AccountService {
         },
       });
 
-      const verificationLink = encodeURI(
-        `http://localhost:3001/account/verify?token=${confirmationToken}&email=${user.email}`,
-      );
-
       const emailJobResp =
         await this.emailService.addEmailJob<AffiliateRegisterContext>({
           template: 'affiliate_verification',
@@ -533,7 +504,11 @@ export class AccountService {
             affiliateVerification: {
               firstName: user.firstName,
               email: user.email,
-              verificationLink,
+              verificationLink: constructVerificationLink(
+                this.appConfig.frontendUrl,
+                confirmationToken,
+                user.email,
+              ),
             },
           },
           recepient: user.email,

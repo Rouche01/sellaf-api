@@ -34,11 +34,6 @@ export class AccountController {
     private readonly appConfig: ConfigType<typeof applicationConfig>,
   ) {}
 
-  @Get('me')
-  getMe(@AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType) {
-    return this.accountService.getUser(user.id);
-  }
-
   @Public()
   @Post('affiliate/register')
   async register(

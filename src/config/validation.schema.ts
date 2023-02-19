@@ -28,4 +28,5 @@ export const validationSchema = Joi.object({
   FLUTTERWAVE_TEST_PUBLIC_KEY: Joi.string().required(),
   FLUTTERWAVE_TEST_SECRET_KEY: Joi.string().required(),
   FLUTTERWAVE_TEST_ENCRYPTION_KEY: Joi.string().required(),
+  FRONTEND_URL: Joi.string().required(),
 });

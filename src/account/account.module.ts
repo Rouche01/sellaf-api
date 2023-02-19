@@ -8,6 +8,6 @@ import { EmailModule } from 'src/email';
   controllers: [AccountController],
   providers: [AccountService, KeycloakUserService],
   imports: [HttpModule, EmailModule],
-  exports: [AccountService],
+  exports: [AccountService, KeycloakUserService],
 })
 export class AccountModule {}

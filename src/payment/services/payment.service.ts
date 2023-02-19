@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -23,7 +24,6 @@ import {
   ConfirmBankAccountDto,
   VerifyTransactionQueryDto,
   WebhookDto,
-  WebhookEvent,
 } from '../dtos';
 import { CreateNewTransactionPayload } from '../interfaces';
 
@@ -156,6 +156,7 @@ export class PaymentService {
       referenceCode: transactionRef,
       type: transactionType,
       referredBy: referredById,
+      paymentProcessorType: 'FLUTTERWAVE',
     });
 
     return { transactionId: transaction.id, ...paymentRedirectRes };
@@ -176,14 +177,23 @@ export class PaymentService {
         data.amount === dto.expectedAmount &&
         data.currency === dto.transactionCurrency
       ) {
-        await this.updateTransactionStatus(transaction, 'success');
+        await this.updateTransactionStatus(
+          transaction,
+          'success',
+          dto.transactionId,
+        );
+        // activate subscription if this is a transaction payment
         await this.activateSubscription(transaction);
         return {
           status: 'successful',
           message: 'Payment was successful',
         };
       } else {
-        await this.updateTransactionStatus(transaction, 'success');
+        await this.updateTransactionStatus(
+          transaction,
+          'success',
+          dto.transactionId,
+        );
         await this.activateSubscription(transaction);
         return {
           status: 'successful-with-clarification',
@@ -195,6 +205,7 @@ export class PaymentService {
       await this.updateTransactionStatus(
         transaction,
         data.status as TransactionStatus,
+        dto.transactionId,
       );
       return {
         status: data.status,
@@ -209,21 +220,44 @@ export class PaymentService {
       include: { subscription: true },
     });
     if (dto.event === 'charge.completed') {
+      console.log(dto);
       this.logger.log(
         `Charge completed webhook event received for ${dto.data.tx_ref} transaction`,
       );
 
       if (dto.data.status.toLocaleLowerCase() === 'successful') {
-        await this.updateTransactionStatus(transaction, 'success');
+        await this.updateTransactionStatus(transaction, 'success', dto.data.id);
         await this.activateSubscription(transaction);
         this.logger.log(`Payment was successful`);
       }
 
       if (dto.data.status.toLocaleLowerCase() === 'failed') {
-        await this.updateTransactionStatus(transaction, 'failed');
+        await this.updateTransactionStatus(transaction, 'failed', dto.data.id);
         this.logger.log(`Payment failed`);
       }
     }
+  }
+
+  async cancelPaymentSubscription(transactionId: string) {
+    const subscriptionByTrxId =
+      await this.flutterwaveService.getSubscriptionByTrxId(transactionId);
+
+    if (subscriptionByTrxId.length === 0) {
+      throw new ConflictException(
+        'Transaction subscription not found in payment processor',
+      );
+    }
+
+    console.log(subscriptionByTrxId, 'sub');
+
+    await this.flutterwaveService.deactivateActiveSubscription(
+      subscriptionByTrxId[0].id,
+    );
+
+    // return {
+    //   status: deactivatedResponse.status,
+    //   message: deactivatedResponse.message,
+    // };
   }
 
   private async createNewTransaction(payload: CreateNewTransactionPayload) {
@@ -234,10 +268,13 @@ export class PaymentService {
         referenceCode: payload.referenceCode,
         type: payload.type,
         address: payload.address,
-        coinbaseRef: payload.coinbaseRef,
-        flutterwaveRef: payload.flutterwaveRef,
         initiatedBy: payload.initiatedBy,
         referredBy: payload.referredBy,
+        paymentProcessorRef: {
+          create: {
+            type: payload.paymentProcessorType,
+          },
+        },
       },
     });
 
@@ -247,10 +284,14 @@ export class PaymentService {
   private async updateTransactionStatus(
     transaction: Transaction,
     status: TransactionStatus,
+    processorTrxId: string,
   ) {
     if (transaction.status !== status) {
       await this.prismaService.transaction.update({
-        data: { status: status },
+        data: {
+          status: status,
+          paymentProcessorRef: { update: { trxId: processorTrxId.toString() } },
+        },
         where: { id: transaction.id },
       });
     }

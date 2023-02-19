@@ -1,4 +1,4 @@
-import { ChargeType, TransactionType } from '@prisma/client';
+import { ChargeType, PaymentProcessor, TransactionType } from '@prisma/client';
 
 export interface CreateNewTransactionPayload {
   amount: number;
@@ -6,8 +6,7 @@ export interface CreateNewTransactionPayload {
   referenceCode: string;
   type: TransactionType;
   address?: string;
-  coinbaseRef?: string;
-  flutterwaveRef?: string;
   initiatedBy: number;
   referredBy?: number;
+  paymentProcessorType: PaymentProcessor;
 }
