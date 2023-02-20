@@ -248,16 +248,9 @@ export class PaymentService {
       );
     }
 
-    console.log(subscriptionByTrxId, 'sub');
-
     await this.flutterwaveService.deactivateActiveSubscription(
       subscriptionByTrxId[0].id,
     );
-
-    // return {
-    //   status: deactivatedResponse.status,
-    //   message: deactivatedResponse.message,
-    // };
   }
 
   private async createNewTransaction(payload: CreateNewTransactionPayload) {

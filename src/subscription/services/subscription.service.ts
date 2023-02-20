@@ -6,10 +6,17 @@ import {
 import { add } from 'date-fns';
 import { SubscriptionPlan, TransactionType } from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
-import { subscriptionPlanConfig } from 'src/constants';
+import {
+  RENEW_SUBSCRIPTION_QUEUE,
+  subscriptionPlanConfig,
+} from 'src/constants';
 import { AuthenticatedUser } from 'src/interfaces';
 import { PaymentService } from 'src/payment';
 import { PrismaService } from 'src/prisma';
+import { AddRenewSubscriptionJobData } from '../interfaces';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Job, Queue } from 'bullmq';
+import { BullBoardService } from 'src/bull_board';
 
 @Injectable()
 export class SubscriptionService {
@@ -17,7 +24,12 @@ export class SubscriptionService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly paymentService: PaymentService,
-  ) {}
+    @InjectQueue(RENEW_SUBSCRIPTION_QUEUE)
+    private readonly renewSubscriptionQueue: Queue<AddRenewSubscriptionJobData>,
+    private readonly bullBoardService: BullBoardService,
+  ) {
+    this.bullBoardService.addToQueuePool(this.renewSubscriptionQueue);
+  }
 
   async createAffiliateSubscription(user: AuthenticatedUser) {
     try {
@@ -70,17 +82,14 @@ export class SubscriptionService {
     user: AuthenticatedUser,
   ) {
     try {
-      const subscription = await this.prismaService.subscription.findFirst({
-        where: { id: subId, affiliateId: user.affiliateId },
-        include: { transaction: { include: { paymentProcessorRef: true } } },
-      });
-
-      if (!subscription.active || !subscription.willRenew) {
-        throw new BadRequestException("You can't cancel inactive subscription");
-      }
+      const subscription = await this.fetchSubscriptionWithId(subId, user);
 
       if (!subscription) {
         throw new NotFoundException('Subscription not found');
+      }
+
+      if (!subscription.active || !subscription.willRenew) {
+        throw new BadRequestException("You can't cancel inactive subscription");
       }
 
       // pass the transaction id of the payment processor
@@ -106,5 +115,44 @@ export class SubscriptionService {
     }
   }
 
-  // renewSubscription(subId: number, user: AuthenticatedUser) {}
+  async renewSubscription(subId: number, user: AuthenticatedUser) {
+    try {
+      const subscription = await this.fetchSubscriptionWithId(subId, user);
+
+      if (!subscription) {
+        throw new NotFoundException('Subscription not found');
+      }
+
+      if (subscription.willRenew) {
+        throw new BadRequestException('This subscription is renewed already!');
+      }
+
+      await this.addRenewSubscriptionJob({ renewDate: subscription.endDate });
+      return 'renew';
+    } catch (err) {
+      this.logger.error(
+        err?.message || 'Something went wrong renewing subscription.',
+      );
+      throw err;
+    }
+  }
+
+  private async fetchSubscriptionWithId(
+    subId: number,
+    user: AuthenticatedUser,
+  ) {
+    return this.prismaService.subscription.findFirst({
+      where: { id: subId, affiliateId: user.affiliateId },
+      include: { transaction: { include: { paymentProcessorRef: true } } },
+    });
+  }
+
+  private async addRenewSubscriptionJob(
+    addRenewJobData: AddRenewSubscriptionJobData,
+  ): Promise<Job<AddRenewSubscriptionJobData>> {
+    return this.renewSubscriptionQueue.add(
+      'add renew subscription job',
+      addRenewJobData,
+    );
+  }
 }

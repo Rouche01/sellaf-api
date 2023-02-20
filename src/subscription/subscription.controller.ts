@@ -48,4 +48,13 @@ export class SubscriptionController {
       user,
     );
   }
+
+  @Patch('renew/:id')
+  @Roles({ roles: ['realm:affiliate'] })
+  async renewSubscription(
+    @Param('id', ParseIntPipe) subscriptionId: number,
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+  ) {
+    return this.subscriptionService.renewSubscription(subscriptionId, user);
+  }
 }

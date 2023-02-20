@@ -1,9 +1,10 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
+import { SEND_EMAIL_QUEUE } from 'src/constants';
 import { EmailJobData } from '../interfaces';
 
-@Processor('SEND_EMAIL')
+@Processor(SEND_EMAIL_QUEUE)
 export class EmailConsumer extends WorkerHost {
   constructor(private readonly mailerService: MailerService) {
     super();
