@@ -17,6 +17,7 @@ import { AddRenewSubscriptionJobData } from '../interfaces';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { BullBoardService } from 'src/bull_board';
+import { getDifferenceInMsFromNow } from '../utils';
 
 @Injectable()
 export class SubscriptionService {
@@ -93,9 +94,28 @@ export class SubscriptionService {
       }
 
       // pass the transaction id of the payment processor
-      await this.paymentService.cancelPaymentSubscription(
-        subscription.transaction.paymentProcessorRef.trxId,
-      );
+      const paymentSubscription =
+        await this.paymentService.getPaymentSubscription(
+          subscription.transaction.paymentProcessorRef.trxId,
+        );
+
+      if (paymentSubscription.status === 'cancelled') {
+        console.log('cancelled');
+        const renewJob = await this.bullBoardService.getQueueJob(
+          subId.toString(),
+          this.renewSubscriptionQueue,
+        );
+        if (renewJob) {
+          await this.bullBoardService.removeQueueJob(
+            subId.toString(),
+            this.renewSubscriptionQueue,
+          );
+        }
+      } else {
+        await this.paymentService.cancelPaymentSubscription(
+          paymentSubscription,
+        );
+      }
 
       await this.prismaService.subscription.update({
         where: { id: subscription.id },
@@ -127,14 +147,35 @@ export class SubscriptionService {
         throw new BadRequestException('This subscription is renewed already!');
       }
 
-      await this.addRenewSubscriptionJob({ renewDate: subscription.endDate });
-      return 'renew';
+      await this.addRenewSubscriptionJob(
+        { user },
+        subscription.endDate,
+        subId.toString(),
+      );
+
+      await this.prismaService.subscription.update({
+        where: { id: subId },
+        data: { willRenew: true },
+      });
+
+      return {
+        status: 'success',
+        message:
+          'Successful! Your subscription will renew when the current subscription expires.',
+      };
     } catch (err) {
       this.logger.error(
         err?.message || 'Something went wrong renewing subscription.',
       );
       throw err;
     }
+  }
+
+  async deactivateSubscription(subId: number) {
+    await this.prismaService.subscription.update({
+      where: { id: subId },
+      data: { active: false },
+    });
   }
 
   private async fetchSubscriptionWithId(
@@ -149,10 +190,17 @@ export class SubscriptionService {
 
   private async addRenewSubscriptionJob(
     addRenewJobData: AddRenewSubscriptionJobData,
+    renewDate: Date,
+    jobId: string,
   ): Promise<Job<AddRenewSubscriptionJobData>> {
     return this.renewSubscriptionQueue.add(
-      'add renew subscription job',
+      `add renew subscription job - ${jobId}`,
       addRenewJobData,
+      {
+        attempts: 5,
+        delay: getDifferenceInMsFromNow(renewDate),
+        jobId,
+      },
     );
   }
 }

@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from 'src/interfaces';
+
 export interface AddRenewSubscriptionJobData {
-  renewDate: Date;
+  user: AuthenticatedUser;
 }

@@ -16,6 +16,7 @@ import { generateTransactionRef } from 'src/account/utils';
 import { AppLoggerService } from 'src/app_logger';
 import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
+import { FlwPaymentSubscription } from 'src/flutterwave/interfaces';
 import { AuthenticatedUser, Country, FlwBank } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
 import {
@@ -238,7 +239,7 @@ export class PaymentService {
     }
   }
 
-  async cancelPaymentSubscription(transactionId: string) {
+  async getPaymentSubscription(transactionId: string) {
     const subscriptionByTrxId =
       await this.flutterwaveService.getSubscriptionByTrxId(transactionId);
 
@@ -248,8 +249,12 @@ export class PaymentService {
       );
     }
 
+    return subscriptionByTrxId[0];
+  }
+
+  async cancelPaymentSubscription(paymentSubscription: FlwPaymentSubscription) {
     await this.flutterwaveService.deactivateActiveSubscription(
-      subscriptionByTrxId[0].id,
+      paymentSubscription.id,
     );
   }
 
