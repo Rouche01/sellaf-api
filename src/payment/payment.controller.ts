@@ -13,11 +13,14 @@ import {
   VerifyTransactionQueryDto,
   WebhookDto,
 } from './dtos';
-import { PaymentService } from './services';
+import { PaymentService, PaymentWebhookService } from './services';
 
 @Controller('payment')
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly paymentWebhookService: PaymentWebhookService,
+  ) {}
 
   @Get('/banks')
   @Public()
@@ -63,6 +66,6 @@ export class PaymentController {
   @Post('/webhook')
   async paymentWebhook(@Body() dto: WebhookDto) {
     console.log('inside webhook');
-    return this.paymentService.useWebhook(dto);
+    return this.paymentWebhookService.useWebhook(dto);
   }
 }

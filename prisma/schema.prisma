@@ -136,7 +136,7 @@ model Affiliate {
   referredBy     Int?
   referredByUser Affiliate? @relation("ReferredAffiliates", fields: [referredBy], references: [id])
 
-  subscriptions Subscription[]
+  subscription Subscription?
 
   @@map("affiliate")
 }
@@ -204,7 +204,10 @@ model Transaction {
   productId Int?
   product   Product? @relation(fields: [productId], references: [id])
 
-  subscription Subscription?
+  subscriptionId Int?          @unique
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  activeForSubscription Subscription? @relation("ActiveTransaction")
 
   @@map("transaction")
 }
@@ -248,8 +251,10 @@ model Subscription {
   affiliateId Int       @unique
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
 
-  transactionId Int         @unique
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  activeTransactionId Int?         @unique
+  activeTransaction   Transaction? @relation("ActiveTransaction", fields: [activeTransactionId], references: [id])
+
+  transactions Transaction[]
 
   @@map("subscription")
 }

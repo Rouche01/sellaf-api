@@ -54,8 +54,13 @@ export class SubscriptionService {
       await this.prismaService.subscription.create({
         data: {
           affiliateId: user.affiliateId,
-          transactionId,
           endDate: add(new Date(), { years: 1 }),
+          transactions: {
+            connect: {
+              id: transactionId,
+            },
+          },
+          activeTransactionId: transactionId,
         },
       });
 
@@ -93,14 +98,13 @@ export class SubscriptionService {
         throw new BadRequestException("You can't cancel inactive subscription");
       }
 
-      // pass the transaction id of the payment processor
+      // pass the transaction id of the payment processor for the active transaction
       const paymentSubscription =
         await this.paymentService.getPaymentSubscription(
-          subscription.transaction.paymentProcessorRef.trxId,
+          subscription.activeTransaction.paymentProcessorRef.trxId,
         );
 
       if (paymentSubscription.status === 'cancelled') {
-        console.log('cancelled');
         const renewJob = await this.bullBoardService.getQueueJob(
           subId.toString(),
           this.renewSubscriptionQueue,
@@ -174,7 +178,7 @@ export class SubscriptionService {
   async deactivateSubscription(subId: number) {
     await this.prismaService.subscription.update({
       where: { id: subId },
-      data: { active: false },
+      data: { active: false, activeTransactionId: null },
     });
   }
 
@@ -184,7 +188,9 @@ export class SubscriptionService {
   ) {
     return this.prismaService.subscription.findFirst({
       where: { id: subId, affiliateId: user.affiliateId },
-      include: { transaction: { include: { paymentProcessorRef: true } } },
+      include: {
+        activeTransaction: { include: { paymentProcessorRef: true } },
+      },
     });
   }
 

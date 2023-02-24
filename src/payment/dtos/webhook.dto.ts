@@ -18,6 +18,10 @@ class WebhookDataDto {
   @IsNotEmpty()
   @IsString()
   tx_ref: string;
+
+  @IsNotEmpty()
+  @IsString()
+  amount: number;
 }
 
 export class WebhookDto {

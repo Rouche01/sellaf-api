@@ -1,4 +1,9 @@
-import { ChargeType, PaymentProcessor, TransactionType } from '@prisma/client';
+import {
+  ChargeType,
+  PaymentProcessor,
+  TransactionStatus,
+  TransactionType,
+} from '@prisma/client';
 
 export interface CreateNewTransactionPayload {
   amount: number;
@@ -9,4 +14,5 @@ export interface CreateNewTransactionPayload {
   initiatedBy: number;
   referredBy?: number;
   paymentProcessorType: PaymentProcessor;
+  status?: TransactionStatus;
 }

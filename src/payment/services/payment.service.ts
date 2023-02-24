@@ -24,7 +24,6 @@ import {
   AddBankQueryDto,
   ConfirmBankAccountDto,
   VerifyTransactionQueryDto,
-  WebhookDto,
 } from '../dtos';
 import { CreateNewTransactionPayload } from '../interfaces';
 
@@ -142,8 +141,8 @@ export class PaymentService {
       meta: paymentMeta,
       payment_options: 'card, account, banktransfer, mpesa',
       ...(subscriptionPlan && {
-        payment_plan:
-          subscriptionPlanConfig[subscriptionPlan].flutterwavePlanId,
+        // revert from test
+        payment_plan: subscriptionPlanConfig.TEST_PLAN.flutterwavePlanId,
       }),
     };
 
@@ -184,7 +183,7 @@ export class PaymentService {
           dto.transactionId,
         );
         // activate subscription if this is a transaction payment
-        await this.activateSubscription(transaction);
+        await this.activateSubscriptionRelatedToTransaction(transaction);
         return {
           status: 'successful',
           message: 'Payment was successful',
@@ -195,7 +194,7 @@ export class PaymentService {
           'success',
           dto.transactionId,
         );
-        await this.activateSubscription(transaction);
+        await this.activateSubscriptionRelatedToTransaction(transaction);
         return {
           status: 'successful-with-clarification',
           message:
@@ -212,30 +211,6 @@ export class PaymentService {
         status: data.status,
         message: `Payment is ${data.status}`,
       };
-    }
-  }
-
-  async useWebhook(dto: WebhookDto) {
-    const transaction = await this.prismaService.transaction.findFirst({
-      where: { referenceCode: dto.data.tx_ref },
-      include: { subscription: true },
-    });
-    if (dto.event === 'charge.completed') {
-      console.log(dto);
-      this.logger.log(
-        `Charge completed webhook event received for ${dto.data.tx_ref} transaction`,
-      );
-
-      if (dto.data.status.toLocaleLowerCase() === 'successful') {
-        await this.updateTransactionStatus(transaction, 'success', dto.data.id);
-        await this.activateSubscription(transaction);
-        this.logger.log(`Payment was successful`);
-      }
-
-      if (dto.data.status.toLocaleLowerCase() === 'failed') {
-        await this.updateTransactionStatus(transaction, 'failed', dto.data.id);
-        this.logger.log(`Payment failed`);
-      }
     }
   }
 
@@ -258,7 +233,7 @@ export class PaymentService {
     );
   }
 
-  private async createNewTransaction(payload: CreateNewTransactionPayload) {
+  async createNewTransaction(payload: CreateNewTransactionPayload) {
     const transaction = await this.prismaService.transaction.create({
       data: {
         amount: payload.amount,
@@ -267,7 +242,7 @@ export class PaymentService {
         type: payload.type,
         address: payload.address,
         initiatedBy: payload.initiatedBy,
-        referredBy: payload.referredBy,
+        referredBy: 2,
         paymentProcessorRef: {
           create: {
             type: payload.paymentProcessorType,
@@ -279,7 +254,7 @@ export class PaymentService {
     return transaction;
   }
 
-  private async updateTransactionStatus(
+  async updateTransactionStatus(
     transaction: Transaction,
     status: TransactionStatus,
     processorTrxId: string,
@@ -295,10 +270,12 @@ export class PaymentService {
     }
   }
 
-  private async activateSubscription(transaction: TransactionWithSubscription) {
+  async activateSubscriptionRelatedToTransaction(
+    transaction: TransactionWithSubscription,
+  ) {
     if (transaction.subscription && !transaction.subscription.active) {
       await this.prismaService.subscription.update({
-        where: { id: transaction.subscription.id },
+        where: { id: transaction.subscriptionId },
         data: { active: true, willRenew: true },
       });
     }
