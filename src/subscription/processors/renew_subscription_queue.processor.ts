@@ -3,7 +3,7 @@ import { Job } from 'bullmq';
 import { RENEW_SUBSCRIPTION_QUEUE } from 'src/constants';
 import { AddRenewSubscriptionJobData } from '../interfaces';
 import { SubscriptionService } from '../services';
-import { getDifferenceInSecondsFromNow } from '../utils';
+import { getDifferenceInSecondsFromNow } from '../../utils';
 
 const SECONDS_IN_A_DAY = 86400;
 

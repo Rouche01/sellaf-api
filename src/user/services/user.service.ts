@@ -61,6 +61,7 @@ export class UserService {
             id: true,
             active: true,
             phoneNumber: true,
+            bankDetails: true,
           },
         },
         seller: {

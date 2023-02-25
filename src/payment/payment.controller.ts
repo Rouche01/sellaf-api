@@ -65,7 +65,6 @@ export class PaymentController {
   @Public()
   @Post('/webhook')
   async paymentWebhook(@Body() dto: WebhookDto) {
-    console.log('inside webhook');
     return this.paymentWebhookService.useWebhook(dto);
   }
 }

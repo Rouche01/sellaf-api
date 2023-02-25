@@ -123,10 +123,7 @@ model Affiliate {
   active          Boolean          @default(false)
   plan            SubscriptionPlan @default(AFFILIATE_DEFAULT)
 
-  bankName      String?
-  accountNumber String?
-  bankCode      String?
-  beneficiaryId Int?
+  bankDetails Bank?
 
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
@@ -161,15 +158,13 @@ model Store {
   updatedAt DateTime @updatedAt
 
   name            String   @unique
-  bankName        String?
-  accountNumber   String?
-  bankCode        String?
-  beneficiaryId   Int?
   country         Country  @default(NG)
   currency        Currency @default(NGN)
   totalEarning    Decimal  @default(0) @db.Decimal(25, 2)
   amountWithdrawn Decimal  @default(0) @db.Decimal(25, 2)
   balance         Decimal  @default(0) @db.Decimal(25, 2)
+
+  bankDetails Bank?
 
   sellerId     Int
   owner        Seller        @relation(fields: [sellerId], references: [id])
@@ -204,7 +199,7 @@ model Transaction {
   productId Int?
   product   Product? @relation(fields: [productId], references: [id])
 
-  subscriptionId Int?          @unique
+  subscriptionId Int?
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
 
   activeForSubscription Subscription? @relation("ActiveTransaction")
@@ -257,4 +252,19 @@ model Subscription {
   transactions Transaction[]
 
   @@map("subscription")
+}
+
+model Bank {
+  id            Int    @id @default(autoincrement())
+  bankName      String
+  accountNumber String
+  bankCode      String
+  accountName   String
+  beneficiaryId Int
+
+  affiliateId Int?       @unique
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+
+  storeId Int?   @unique
+  store   Store? @relation(fields: [storeId], references: [id])
 }

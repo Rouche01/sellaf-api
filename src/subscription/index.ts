@@ -3,4 +3,3 @@ export { SubscriptionModule } from './subscription.module';
 export * from './interfaces';
 export * from './processors';
 export * from './services';
-export * from './utils';

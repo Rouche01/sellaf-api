@@ -25,7 +25,10 @@ import {
   ConfirmBankAccountDto,
   VerifyTransactionQueryDto,
 } from '../dtos';
-import { CreateNewTransactionPayload } from '../interfaces';
+import {
+  CreateBankDetailsPayload,
+  CreateNewTransactionPayload,
+} from '../interfaces';
 
 type TransactionWithSubscription = Transaction & {
   subscription: Subscription;
@@ -55,7 +58,7 @@ export class PaymentService {
     query: AddBankQueryDto,
     user: AuthenticatedUser,
   ): Promise<{ status: string; message: string }> {
-    const { bankCode, accountNumber, beneficiaryName } = dto;
+    const { bankCode, accountNumber, beneficiaryName, accountName } = dto;
     const { applyTo, id } = query;
     const beneficiaryResp =
       await this.flutterwaveService.addTransferBeneficiaries(
@@ -69,6 +72,7 @@ export class PaymentService {
       bankCode: beneficiaryResp.bankCode,
       bankName: beneficiaryResp.bankName,
       beneficiaryId: beneficiaryResp.id,
+      accountName,
     };
 
     try {
@@ -81,10 +85,7 @@ export class PaymentService {
           throw new NotFoundException('Store does not exist');
         }
 
-        await this.prismaService.store.update({
-          where: { id },
-          data: bankUpdateData,
-        });
+        await this.createBankDetails({ ...bankUpdateData, storeId: store.id });
       }
 
       if (applyTo === 'affiliate') {
@@ -96,9 +97,9 @@ export class PaymentService {
           throw new NotFoundException('Affiliate does not exist');
         }
 
-        await this.prismaService.affiliate.update({
-          where: { id },
-          data: bankUpdateData,
+        await this.createBankDetails({
+          ...bankUpdateData,
+          affiliateId: affiliate.id,
         });
       }
 
@@ -149,6 +150,7 @@ export class PaymentService {
     const paymentRedirectRes =
       await this.flutterwaveService.payWithStandardFlow(payload);
 
+    // create a new transaction here not tied to any subscription
     const transaction = await this.createNewTransaction({
       amount: +amount,
       chargeType: 'DEBIT',
@@ -248,6 +250,7 @@ export class PaymentService {
             type: payload.paymentProcessorType,
           },
         },
+        status: payload.status,
       },
     });
 
@@ -279,5 +282,13 @@ export class PaymentService {
         data: { active: true, willRenew: true },
       });
     }
+  }
+
+  private async createBankDetails(
+    bankDetailsPayload: CreateBankDetailsPayload,
+  ) {
+    await this.prismaService.bank.create({
+      data: { ...bankDetailsPayload },
+    });
   }
 }

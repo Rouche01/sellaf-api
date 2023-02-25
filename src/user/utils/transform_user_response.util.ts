@@ -1,4 +1,4 @@
-import { User, UserRole } from '@prisma/client';
+import { Bank, User, UserRole } from '@prisma/client';
 
 type UserResponse = User & {
   seller?: {
@@ -13,6 +13,7 @@ type UserResponse = User & {
     affiliateCode: string;
     active: boolean;
     phoneNumber: string;
+    bankDetails: Bank;
   };
   userRoles: UserRole[];
 };
@@ -29,6 +30,9 @@ export const transformUserResponse = (user: UserResponse) => {
     phoneNumber: user?.affiliate.phoneNumber || user?.seller.phoneNumber,
     verified: user?.affiliate.active || user?.seller.active,
     roles,
-    ...(user.affiliate && { affiliateCode: user.affiliate.affiliateCode }),
+    ...(user.affiliate && {
+      affiliateCode: user.affiliate.affiliateCode,
+      bankDetails: user.affiliate.bankDetails,
+    }),
   };
 };

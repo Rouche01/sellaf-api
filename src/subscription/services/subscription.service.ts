@@ -17,7 +17,7 @@ import { AddRenewSubscriptionJobData } from '../interfaces';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { BullBoardService } from 'src/bull_board';
-import { getDifferenceInMsFromNow } from '../utils';
+import { getDifferenceInMsFromNow } from '../../utils';
 
 @Injectable()
 export class SubscriptionService {
@@ -51,6 +51,8 @@ export class SubscriptionService {
           SubscriptionPlan.AFFILIATE_DEFAULT,
         );
 
+      // create the subscription record here and connect the transaction
+      // as transaction history and as the transaction for the active subscription
       await this.prismaService.subscription.create({
         data: {
           affiliateId: user.affiliateId,
