@@ -18,6 +18,7 @@ import { StoreModule } from './store';
 import { PaymentModule } from './payment';
 import { UserModule } from './user';
 import { SubscriptionModule } from './subscription';
+import { CoinbaseModule } from './coinbase';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { SubscriptionModule } from './subscription';
     PaymentModule,
     UserModule,
     SubscriptionModule,
+    CoinbaseModule,
   ],
   controllers: [AppController],
   providers: [

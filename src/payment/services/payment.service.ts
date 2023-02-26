@@ -143,7 +143,8 @@ export class PaymentService {
       payment_options: 'card, account, banktransfer, mpesa',
       ...(subscriptionPlan && {
         // revert from test
-        payment_plan: subscriptionPlanConfig.TEST_PLAN.flutterwavePlanId,
+        payment_plan:
+          subscriptionPlanConfig[subscriptionPlan].flutterwavePlanId,
       }),
     };
 
