@@ -1,9 +1,11 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import {
   Currency,
   SubscriptionPlan,
@@ -14,6 +16,7 @@ import {
 } from '@prisma/client';
 import { generateTransactionRef } from 'src/account/utils';
 import { AppLoggerService } from 'src/app_logger';
+import { applicationConfig } from 'src/config';
 import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
 import { FlwPaymentSubscription } from 'src/flutterwave/interfaces';
@@ -28,7 +31,9 @@ import {
 import {
   CreateBankDetailsPayload,
   CreateNewTransactionPayload,
+  HandlePaymentArgs,
 } from '../interfaces';
+import { FlutterwaveStrategy, PaymentContext } from '../strategy';
 
 type TransactionWithSubscription = Transaction & {
   subscription: Subscription;
@@ -40,6 +45,8 @@ export class PaymentService {
   constructor(
     private readonly flutterwaveService: FlutterwaveService,
     private readonly prismaService: PrismaService,
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
   ) {}
 
   async getBankList(country: Country = 'NG'): Promise<FlwBank[]> {
@@ -112,57 +119,21 @@ export class PaymentService {
     }
   }
 
-  async payWithFlutterwave(
-    user: AuthenticatedUser,
-    paymentMeta: Record<string, any>,
-    amount: string,
-    transactionType: TransactionType,
-    subscriptionPlan?: SubscriptionPlan,
-  ) {
-    const transactionRef = generateTransactionRef();
+  async handlePayment({
+    initiatePaymentArgs,
+    paymentProcessor,
+  }: HandlePaymentArgs) {
+    if (paymentProcessor === 'flutterwave') {
+      const flutterwaveContext = new PaymentContext(
+        new FlutterwaveStrategy(
+          this.prismaService,
+          this.flutterwaveService,
+          this.appConfig,
+        ),
+      );
 
-    let referredById: number;
-
-    if (transactionType === 'SUBSCRIPTION') {
-      const affiliateUser = await this.prismaService.affiliate.findUnique({
-        where: { id: user.affiliateId },
-      });
-      referredById = affiliateUser.referredBy;
+      return flutterwaveContext.makePayment(initiatePaymentArgs);
     }
-
-    const payload = {
-      tx_ref: transactionRef,
-      amount,
-      currency: Currency.NGN,
-      redirect_url: 'http://localhost:3000/overview',
-      customer: {
-        email: user.email,
-        name: `${user.firstName} ${user.family_name}`,
-      },
-      meta: paymentMeta,
-      payment_options: 'card, account, banktransfer, mpesa',
-      ...(subscriptionPlan && {
-        // revert from test
-        payment_plan:
-          subscriptionPlanConfig[subscriptionPlan].flutterwavePlanId,
-      }),
-    };
-
-    const paymentRedirectRes =
-      await this.flutterwaveService.payWithStandardFlow(payload);
-
-    // create a new transaction here not tied to any subscription
-    const transaction = await this.createNewTransaction({
-      amount: +amount,
-      chargeType: 'DEBIT',
-      initiatedBy: user.id,
-      referenceCode: transactionRef,
-      type: transactionType,
-      referredBy: referredById,
-      paymentProcessorType: 'FLUTTERWAVE',
-    });
-
-    return { transactionId: transaction.id, ...paymentRedirectRes };
   }
 
   async verifyTransaction(dto: VerifyTransactionQueryDto) {

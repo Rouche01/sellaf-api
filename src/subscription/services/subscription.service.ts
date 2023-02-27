@@ -43,13 +43,16 @@ export class SubscriptionService {
       };
 
       const { paymentLink, status, transactionId } =
-        await this.paymentService.payWithFlutterwave(
-          user,
-          paymentMeta,
-          subscriptionPlanConfig[affiliate.plan].planAmount,
-          TransactionType.SUBSCRIPTION,
-          SubscriptionPlan.AFFILIATE_DEFAULT,
-        );
+        await this.paymentService.handlePayment({
+          initiatePaymentArgs: {
+            user,
+            paymentMeta,
+            amount: subscriptionPlanConfig[affiliate.plan].planAmount,
+            transactionType: TransactionType.SUBSCRIPTION,
+            subscriptionPlan: SubscriptionPlan.AFFILIATE_DEFAULT,
+          },
+          paymentProcessor: 'flutterwave',
+        });
 
       // create the subscription record here and connect the transaction
       // as transaction history and as the transaction for the active subscription
