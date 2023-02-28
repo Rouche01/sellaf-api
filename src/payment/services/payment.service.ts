@@ -1,23 +1,11 @@
 import {
   ConflictException,
-  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigType } from '@nestjs/config';
-import {
-  Currency,
-  SubscriptionPlan,
-  Transaction,
-  TransactionStatus,
-  TransactionType,
-  Subscription,
-} from '@prisma/client';
-import { generateTransactionRef } from 'src/account/utils';
+import { Transaction, TransactionStatus, Subscription } from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
-import { applicationConfig } from 'src/config';
-import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
 import { FlwPaymentSubscription } from 'src/flutterwave/interfaces';
 import { AuthenticatedUser, Country, FlwBank } from 'src/interfaces';
@@ -33,7 +21,8 @@ import {
   CreateNewTransactionPayload,
   HandlePaymentArgs,
 } from '../interfaces';
-import { FlutterwaveStrategy, PaymentContext } from '../strategy';
+import { FlutterwaveStrategy } from '../strategy';
+import { PaymentContext } from '../strategy';
 
 type TransactionWithSubscription = Transaction & {
   subscription: Subscription;
@@ -45,8 +34,8 @@ export class PaymentService {
   constructor(
     private readonly flutterwaveService: FlutterwaveService,
     private readonly prismaService: PrismaService,
-    @Inject(applicationConfig.KEY)
-    private readonly appConfig: ConfigType<typeof applicationConfig>,
+    private readonly flutterwaveStrategy: FlutterwaveStrategy,
+    private readonly paymentContext: PaymentContext,
   ) {}
 
   async getBankList(country: Country = 'NG'): Promise<FlwBank[]> {
@@ -124,15 +113,8 @@ export class PaymentService {
     paymentProcessor,
   }: HandlePaymentArgs) {
     if (paymentProcessor === 'flutterwave') {
-      const flutterwaveContext = new PaymentContext(
-        new FlutterwaveStrategy(
-          this.prismaService,
-          this.flutterwaveService,
-          this.appConfig,
-        ),
-      );
-
-      return flutterwaveContext.makePayment(initiatePaymentArgs);
+      this.paymentContext.setStrategy(this.flutterwaveStrategy);
+      return this.paymentContext.makePayment(initiatePaymentArgs);
     }
   }
 

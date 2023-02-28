@@ -1,5 +1,6 @@
+export { PaymentStrategy } from './payment_strategy.interface';
 export {
-  PaymentStrategy,
   InitiatePaymentArgs,
   InitiatePaymentResponse,
-} from './payment_strategy.interface';
+} from './initiate_payment.interface';
+export { FetchBanksArgs, FetchBanksResponse } from './fetch_banks.interface';

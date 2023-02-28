@@ -1,4 +1,4 @@
-import { Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { Currency } from '@prisma/client';
 import { applicationConfig } from 'src/config';
@@ -13,6 +13,7 @@ import {
   PaymentStrategy,
 } from './interfaces';
 
+@Injectable()
 export class FlutterwaveStrategy implements PaymentStrategy {
   constructor(
     private readonly prismaService: PrismaService,

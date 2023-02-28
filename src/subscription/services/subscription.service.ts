@@ -54,20 +54,41 @@ export class SubscriptionService {
           paymentProcessor: 'flutterwave',
         });
 
-      // create the subscription record here and connect the transaction
-      // as transaction history and as the transaction for the active subscription
-      await this.prismaService.subscription.create({
-        data: {
-          affiliateId: user.affiliateId,
-          endDate: add(new Date(), { years: 1 }),
-          transactions: {
-            connect: {
-              id: transactionId,
+      const existingSubscription =
+        await this.prismaService.subscription.findUnique({
+          where: { affiliateId: user.affiliateId },
+        });
+
+      if (existingSubscription) {
+        await this.prismaService.subscription.update({
+          where: { id: existingSubscription.id },
+          data: {
+            startDate: new Date(),
+            endDate: add(new Date(), { years: 1 }),
+            transactions: {
+              connect: {
+                id: transactionId,
+              },
             },
+            activeTransactionId: transactionId,
           },
-          activeTransactionId: transactionId,
-        },
-      });
+        });
+      } else {
+        // create the subscription record here and connect the transaction
+        // as transaction history and as the transaction for the active subscription
+        await this.prismaService.subscription.create({
+          data: {
+            affiliateId: user.affiliateId,
+            endDate: add(new Date(), { years: 1 }),
+            transactions: {
+              connect: {
+                id: transactionId,
+              },
+            },
+            activeTransactionId: transactionId,
+          },
+        });
+      }
 
       return { paymentLink, status };
     } catch (err) {
