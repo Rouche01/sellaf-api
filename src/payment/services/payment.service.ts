@@ -4,7 +4,12 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Transaction, TransactionStatus, Subscription } from '@prisma/client';
+import {
+  Transaction,
+  TransactionStatus,
+  Subscription,
+  PaymentProcessor,
+} from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
 import { FlutterwaveService } from 'src/flutterwave';
 import { FlwPaymentSubscription } from 'src/flutterwave/interfaces';
@@ -21,7 +26,7 @@ import {
   CreateNewTransactionPayload,
   HandlePaymentArgs,
 } from '../interfaces';
-import { FlutterwaveStrategy } from '../strategy';
+import { CoinbaseStrategy, FlutterwaveStrategy } from '../strategy';
 import { PaymentContext } from '../strategy';
 
 type TransactionWithSubscription = Transaction & {
@@ -35,11 +40,18 @@ export class PaymentService {
     private readonly flutterwaveService: FlutterwaveService,
     private readonly prismaService: PrismaService,
     private readonly flutterwaveStrategy: FlutterwaveStrategy,
+    private readonly coinbaseStrategy: CoinbaseStrategy,
     private readonly paymentContext: PaymentContext,
   ) {}
 
-  async getBankList(country: Country = 'NG'): Promise<FlwBank[]> {
-    return this.flutterwaveService.getBanks(country);
+  async getBankList(
+    country: Country = 'NG',
+    paymentProcessor: PaymentProcessor,
+  ): Promise<FlwBank[]> {
+    if (paymentProcessor === PaymentProcessor.FLUTTERWAVE) {
+      this.paymentContext.setStrategy(this.flutterwaveStrategy);
+      return this.paymentContext.fetchBankList({ country });
+    }
   }
 
   async confirmAccountNumber(dto: ConfirmBankAccountDto) {
@@ -112,8 +124,13 @@ export class PaymentService {
     initiatePaymentArgs,
     paymentProcessor,
   }: HandlePaymentArgs) {
-    if (paymentProcessor === 'flutterwave') {
+    if (paymentProcessor === PaymentProcessor.FLUTTERWAVE) {
       this.paymentContext.setStrategy(this.flutterwaveStrategy);
+      return this.paymentContext.makePayment(initiatePaymentArgs);
+    }
+
+    if (paymentProcessor === PaymentProcessor.COINBASE) {
+      this.paymentContext.setStrategy(this.coinbaseStrategy);
       return this.paymentContext.makePayment(initiatePaymentArgs);
     }
   }
@@ -198,7 +215,7 @@ export class PaymentService {
         type: payload.type,
         address: payload.address,
         initiatedBy: payload.initiatedBy,
-        referredBy: 2,
+        referredBy: payload.referredBy,
         paymentProcessorRef: {
           create: {
             type: payload.paymentProcessorType,

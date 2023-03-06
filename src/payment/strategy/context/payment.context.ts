@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { InitiatePaymentArgs, PaymentStrategy } from '../interfaces';
+import {
+  FetchBanksArgs,
+  InitiatePaymentArgs,
+  PaymentStrategy,
+} from '../interfaces';
 
 @Injectable()
 export class PaymentContext {
@@ -15,5 +19,9 @@ export class PaymentContext {
 
   makePayment(makePaymentArgs: InitiatePaymentArgs) {
     return this.strategy.initiatePayment(makePaymentArgs);
+  }
+
+  fetchBankList(fetchBankArgs: FetchBanksArgs) {
+    return this.strategy.getBankList(fetchBankArgs);
   }
 }

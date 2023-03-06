@@ -4,7 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { add } from 'date-fns';
-import { SubscriptionPlan, TransactionType } from '@prisma/client';
+import {
+  PaymentProcessor,
+  SubscriptionPlan,
+  TransactionType,
+} from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
 import {
   RENEW_SUBSCRIPTION_QUEUE,
@@ -32,7 +36,10 @@ export class SubscriptionService {
     this.bullBoardService.addToQueuePool(this.renewSubscriptionQueue);
   }
 
-  async createAffiliateSubscription(user: AuthenticatedUser) {
+  async createAffiliateSubscription(
+    user: AuthenticatedUser,
+    paymentProcessor: PaymentProcessor,
+  ) {
     try {
       const affiliate = await this.prismaService.affiliate.findUnique({
         where: { id: user.affiliateId },
@@ -50,8 +57,9 @@ export class SubscriptionService {
             amount: subscriptionPlanConfig[affiliate.plan].planAmount,
             transactionType: TransactionType.SUBSCRIPTION,
             subscriptionPlan: SubscriptionPlan.AFFILIATE_DEFAULT,
+            description: 'Affiliate Subscription',
           },
-          paymentProcessor: 'flutterwave',
+          paymentProcessor,
         });
 
       const existingSubscription =
@@ -178,7 +186,11 @@ export class SubscriptionService {
       }
 
       await this.addRenewSubscriptionJob(
-        { user },
+        {
+          user,
+          paymentProcessor:
+            subscription.activeTransaction.paymentProcessorRef.type,
+        },
         subscription.endDate,
         subId.toString(),
       );

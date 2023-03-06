@@ -33,4 +33,5 @@ export const applicationConfig = registerAs('application', () => ({
     apiKey: process.env.COINBASE_API_KEY,
   },
   frontendUrl: process.env.FRONTEND_URL,
+  fiatPaymentGateway: process.env.FIAT_PAYMENT_GATEWAY,
 }));

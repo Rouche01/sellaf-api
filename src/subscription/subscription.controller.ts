@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { AuthenticatedUser as AuthenticatedUserType } from 'src/interfaces';
 import { AuthUserPipe } from 'src/pipes';
+import { CreateSubscriptionDto } from './dtos';
 import { SubscriptionService } from './services';
 
 @Controller('subscription')
@@ -19,8 +21,12 @@ export class SubscriptionController {
   @Roles({ roles: ['realm:affiliate'] })
   createSubscription(
     @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+    @Body() dto: CreateSubscriptionDto,
   ) {
-    return this.subscriptionService.createAffiliateSubscription(user);
+    return this.subscriptionService.createAffiliateSubscription(
+      user,
+      dto.paymentProcessor,
+    );
   }
 
   @Get('active')

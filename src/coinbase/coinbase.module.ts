@@ -3,7 +3,6 @@ import { Module } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { applicationConfig } from 'src/config';
-import { CoinbaseController } from './coinbase.controller';
 import { CoinbaseInterceptor } from './interceptors';
 import { CoinbaseService } from './services';
 
@@ -23,6 +22,6 @@ import { CoinbaseService } from './services';
       },
     }),
   ],
-  controllers: [CoinbaseController],
+  exports: [CoinbaseService],
 })
 export class CoinbaseModule {}

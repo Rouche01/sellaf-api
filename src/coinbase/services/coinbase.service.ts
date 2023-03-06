@@ -21,7 +21,7 @@ export class CoinbaseService {
       description: createChargePayload.description,
       pricing_type: 'fixed_price',
       local_price: {
-        amount: createChargePayload.amout,
+        amount: createChargePayload.amount,
         currency: createChargePayload.currency,
       },
       metadata: {

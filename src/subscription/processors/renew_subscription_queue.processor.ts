@@ -14,7 +14,7 @@ export class RenewSubscriptionConsumer extends WorkerHost {
   }
 
   async process(job: Job<AddRenewSubscriptionJobData>): Promise<void> {
-    const { user } = job.data;
+    const { user, paymentProcessor } = job.data;
     const activeSubscription =
       await this.subscriptionService.getAffiliateActiveSubscription(user);
 
@@ -32,6 +32,9 @@ export class RenewSubscriptionConsumer extends WorkerHost {
       );
     }
 
-    await this.subscriptionService.createAffiliateSubscription(user);
+    await this.subscriptionService.createAffiliateSubscription(
+      user,
+      paymentProcessor,
+    );
   }
 }

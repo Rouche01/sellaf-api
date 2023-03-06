@@ -1,6 +1,6 @@
 export interface CreateChargePayload {
   name: string;
-  amout: string;
+  amount: string;
   currency: string;
   description: string;
   referenceCode: string;

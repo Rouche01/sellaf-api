@@ -31,4 +31,5 @@ export const validationSchema = Joi.object({
   FRONTEND_URL: Joi.string().required(),
   COINBASE_API_BASE_URL: Joi.string().required(),
   COINBASE_API_KEY: Joi.string().required(),
+  FIAT_PAYMENT_GATEWAY: Joi.string().required(),
 });

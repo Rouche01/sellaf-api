@@ -1,5 +1,8 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
+import { PaymentProcessor } from '@prisma/client';
 import { AuthenticatedUser, Public, Roles } from 'nest-keycloak-connect';
+import { applicationConfig } from 'src/config';
 import {
   AuthenticatedUser as AuthenticatedUserType,
   FlwBank,
@@ -20,6 +23,8 @@ export class PaymentController {
   constructor(
     private readonly paymentService: PaymentService,
     private readonly paymentWebhookService: PaymentWebhookService,
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
   ) {}
 
   @Get('/banks')
@@ -29,7 +34,10 @@ export class PaymentController {
     message: string;
     banks: FlwBank[];
   }> {
-    const banks = await this.paymentService.getBankList(dto.country);
+    const banks = await this.paymentService.getBankList(
+      dto.country,
+      this.appConfig.fiatPaymentGateway as PaymentProcessor,
+    );
     return {
       status: 'success',
       message: 'Banks successfully retrieved',

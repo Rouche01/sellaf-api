@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { Currency } from '@prisma/client';
+import { Currency, PaymentProcessor } from '@prisma/client';
 import { applicationConfig } from 'src/config';
 import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
@@ -8,6 +8,8 @@ import { PrismaService } from 'src/prisma';
 import { CreateNewTransactionPayload } from '../interfaces';
 import { generateTransactionRef } from '../utils';
 import {
+  FetchBanksArgs,
+  FetchBanksResponse,
   InitiatePaymentArgs,
   InitiatePaymentResponse,
   PaymentStrategy,
@@ -67,10 +69,15 @@ export class FlutterwaveStrategy implements PaymentStrategy {
       referenceCode: transactionRef,
       type: transactionType,
       referredBy: referredById,
-      paymentProcessorType: 'FLUTTERWAVE',
+      paymentProcessorType: PaymentProcessor.FLUTTERWAVE,
     });
 
     return { transactionId: transaction.id, ...paymentRedirectRes };
+  }
+
+  async getBankList(args: FetchBanksArgs): Promise<FetchBanksResponse> {
+    const { country } = args;
+    return this.flutterwaveService.getBanks(country);
   }
 
   private async createNewTransaction(payload: CreateNewTransactionPayload) {
@@ -82,7 +89,7 @@ export class FlutterwaveStrategy implements PaymentStrategy {
         type: payload.type,
         address: payload.address,
         initiatedBy: payload.initiatedBy,
-        referredBy: 2,
+        referredBy: payload.referredBy,
         paymentProcessorRef: {
           create: {
             type: payload.paymentProcessorType,

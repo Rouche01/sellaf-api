@@ -7,6 +7,7 @@ export interface InitiatePaymentArgs {
   amount: string;
   transactionType: TransactionType;
   subscriptionPlan?: SubscriptionPlan;
+  description?: string;
 }
 
 export interface InitiatePaymentResponse {

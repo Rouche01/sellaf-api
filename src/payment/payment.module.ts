@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CoinbaseModule } from 'src/coinbase';
 import { FlutterwaveModule } from 'src/flutterwave';
 import { PaymentController } from './payment.controller';
 import { PaymentService, PaymentWebhookService } from './services';
@@ -16,7 +17,7 @@ import {
     FlutterwaveStrategy,
     CoinbaseStrategy,
   ],
-  imports: [FlutterwaveModule],
+  imports: [FlutterwaveModule, CoinbaseModule],
   controllers: [PaymentController],
   exports: [PaymentService],
 })
