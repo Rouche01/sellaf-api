@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Inject,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { PaymentProcessor } from '@prisma/client';
 import { AuthenticatedUser, Public, Roles } from 'nest-keycloak-connect';
@@ -72,7 +80,10 @@ export class PaymentController {
 
   @Public()
   @Post('/webhook')
-  async paymentWebhook(@Body() dto: WebhookDto) {
-    return this.paymentWebhookService.useWebhook(dto);
+  async paymentWebhook(
+    @Body() dto: WebhookDto,
+    @Headers('verif-hash') webhookSignature: string,
+  ) {
+    return this.paymentWebhookService.useWebhook(dto, webhookSignature);
   }
 }

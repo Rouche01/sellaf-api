@@ -27,6 +27,7 @@ export const applicationConfig = registerAs('application', () => ({
     testPublicKey: process.env.FLUTTERWAVE_TEST_PUBLIC_KEY,
     testSecretKey: process.env.FLUTTERWAVE_TEST_SECRET_KEY,
     testEncryptionKey: process.env.FLUTTERWAVE_TEST_ENCRYPTION_KEY,
+    webhookSecretHash: process.env.FLUTTERWAVE_SECRET_HASH,
   },
   coinbase: {
     apiBaseUrl: process.env.COINBASE_API_BASE_URL,

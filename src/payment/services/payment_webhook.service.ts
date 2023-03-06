@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import { Transaction, TransactionStatus } from '@prisma/client';
 import add from 'date-fns/add';
 import { AppLoggerService } from 'src/app_logger';
+import { applicationConfig } from 'src/config';
 import { PrismaService } from 'src/prisma';
 import { getDifferenceInSecondsTillNow } from 'src/utils';
 import { WebhookDto } from '../dtos';
@@ -15,9 +17,19 @@ export class PaymentWebhookService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly paymentService: PaymentService,
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
   ) {}
 
-  async useWebhook(dto: WebhookDto) {
+  async useWebhook(dto: WebhookDto, webhookSignature: string) {
+    if (
+      !webhookSignature ||
+      webhookSignature !== this.appConfig.flutterwave.webhookSecretHash
+    ) {
+      this.logger.log('Wrong webhook signature used to send event');
+      throw new BadRequestException();
+    }
+
     const transaction = await this.prismaService.transaction.findMany({
       where: { referenceCode: dto.data.tx_ref },
       include: { subscription: true },
