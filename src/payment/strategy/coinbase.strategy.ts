@@ -19,14 +19,16 @@ export class CoinbaseStrategy implements PaymentStrategy {
   async initiatePayment(
     args: InitiatePaymentArgs,
   ): Promise<InitiatePaymentResponse> {
-    const { amount, description, transactionType, user } = args;
+    const { amount, description, transactionType, user, paymentMeta } = args;
     const transactionRef = generateTransactionRef();
     const { paymentLink, status } = await this.coinbaseService.createCharge({
-      amount,
+      // hardcoding this just for testing
+      amount: '500',
       currency: Currency.NGN,
       description,
       name: 'Sellaf Africa',
       referenceCode: transactionRef,
+      paymentMetadata: paymentMeta,
     });
 
     let referredById: number;

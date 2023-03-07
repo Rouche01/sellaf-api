@@ -4,4 +4,5 @@ export interface CreateChargePayload {
   currency: string;
   description: string;
   referenceCode: string;
+  paymentMetadata: Record<string, unknown>;
 }

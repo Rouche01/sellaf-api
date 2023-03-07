@@ -26,6 +26,7 @@ export class CoinbaseService {
       },
       metadata: {
         trx_ref: createChargePayload.referenceCode,
+        ...createChargePayload.paymentMetadata,
       },
       redirect_url: `${this.appConfig.frontendUrl}/overview`,
     };

@@ -32,6 +32,7 @@ export const applicationConfig = registerAs('application', () => ({
   coinbase: {
     apiBaseUrl: process.env.COINBASE_API_BASE_URL,
     apiKey: process.env.COINBASE_API_KEY,
+    webhookSecretHash: process.env.COINBASE_SECRET_HASH,
   },
   frontendUrl: process.env.FRONTEND_URL,
   fiatPaymentGateway: process.env.FIAT_PAYMENT_GATEWAY,
