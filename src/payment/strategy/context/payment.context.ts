@@ -2,18 +2,19 @@ import { Injectable } from '@nestjs/common';
 import {
   FetchBanksArgs,
   InitiatePaymentArgs,
-  PaymentStrategy,
+  PaymentStrategyInterface,
+  UseWebhookArgs,
 } from '../interfaces';
 
 @Injectable()
 export class PaymentContext {
-  private strategy: PaymentStrategy;
+  private strategy: PaymentStrategyInterface;
 
   // constructor(strategy: PaymentStrategy) {
   //   this.strategy = strategy;
   // }
 
-  setStrategy(strategy: PaymentStrategy) {
+  setStrategy(strategy: PaymentStrategyInterface) {
     this.strategy = strategy;
   }
 
@@ -23,5 +24,9 @@ export class PaymentContext {
 
   fetchBankList(fetchBankArgs: FetchBanksArgs) {
     return this.strategy.getBankList(fetchBankArgs);
+  }
+
+  useWebhook(useWebhookArgs: UseWebhookArgs): Promise<void> {
+    return this.strategy.useWebhook(useWebhookArgs);
   }
 }

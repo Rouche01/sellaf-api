@@ -1,22 +1,32 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { Currency, PaymentProcessor } from '@prisma/client';
+import {
+  ChargeType,
+  Currency,
+  PaymentProcessor,
+  TransactionStatus,
+} from '@prisma/client';
+import { AppLoggerService } from 'src/app_logger';
 import { applicationConfig } from 'src/config';
 import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
 import { PrismaService } from 'src/prisma';
-import { CreateNewTransactionPayload } from '../interfaces';
+import { getDifferenceInSecondsTillNow } from 'src/utils';
+import { SECONDS_IN_A_DAY } from '../constants';
 import { generateTransactionRef } from '../utils';
 import {
   FetchBanksArgs,
   FetchBanksResponse,
   InitiatePaymentArgs,
   InitiatePaymentResponse,
-  PaymentStrategy,
+  PaymentStrategyInterface,
+  UseWebhookArgs,
 } from './interfaces';
 
 @Injectable()
-export class FlutterwaveStrategy implements PaymentStrategy {
+export class FlutterwaveStrategy implements PaymentStrategyInterface {
+  private readonly logger = new AppLoggerService(FlutterwaveStrategy.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly flutterwaveService: FlutterwaveService,
@@ -27,8 +37,14 @@ export class FlutterwaveStrategy implements PaymentStrategy {
   async initiatePayment(
     args: InitiatePaymentArgs,
   ): Promise<InitiatePaymentResponse> {
-    const { amount, paymentMeta, transactionType, user, subscriptionPlan } =
-      args;
+    const {
+      amount,
+      paymentMeta,
+      transactionType,
+      user,
+      subscriptionPlan,
+      createTransactionRecord,
+    } = args;
     const transactionRef = generateTransactionRef();
 
     let referredById: number;
@@ -62,7 +78,7 @@ export class FlutterwaveStrategy implements PaymentStrategy {
       await this.flutterwaveService.payWithStandardFlow(payload);
 
     // create a new transaction here not tied to any subscription
-    const transaction = await this.createNewTransaction({
+    const transaction = await createTransactionRecord({
       amount: +amount,
       chargeType: 'DEBIT',
       initiatedBy: user.id,
@@ -80,25 +96,82 @@ export class FlutterwaveStrategy implements PaymentStrategy {
     return this.flutterwaveService.getBanks(country);
   }
 
-  private async createNewTransaction(payload: CreateNewTransactionPayload) {
-    const transaction = await this.prismaService.transaction.create({
-      data: {
-        amount: payload.amount,
-        chargeType: payload.chargeType,
-        referenceCode: payload.referenceCode,
-        type: payload.type,
-        address: payload.address,
-        initiatedBy: payload.initiatedBy,
-        referredBy: payload.referredBy,
-        paymentProcessorRef: {
-          create: {
-            type: payload.paymentProcessorType,
-          },
-        },
-        status: payload.status,
-      },
+  async useWebhook(args: UseWebhookArgs): Promise<void> {
+    const {
+      webhookDto,
+      webhookSignature,
+      onSuccessfulPayment,
+      onFailedPayment,
+    } = args;
+
+    if (
+      !webhookSignature ||
+      webhookSignature !== this.appConfig.flutterwave.webhookSecretHash
+    ) {
+      throw new ForbiddenException();
+    }
+
+    this.logger.log(webhookDto.event);
+
+    const transaction = await this.prismaService.transaction.findMany({
+      where: { referenceCode: webhookDto.data.tx_ref },
+      include: { subscription: true },
+      take: -1,
     });
 
-    return transaction;
+    const immediatePreviousTransaction = transaction[0];
+    const timeDifferenceFromLastTrx = getDifferenceInSecondsTillNow(
+      immediatePreviousTransaction.createdAt,
+    );
+
+    console.log(immediatePreviousTransaction, timeDifferenceFromLastTrx);
+    if (webhookDto.event === 'charge.completed') {
+      this.logger.log(
+        `Charge completed webhook event received for ${webhookDto.data.tx_ref} transaction`,
+      );
+
+      if (webhookDto.data.status.toLocaleLowerCase() === 'successful') {
+        onSuccessfulPayment({
+          isNewTransaction: timeDifferenceFromLastTrx > SECONDS_IN_A_DAY,
+          lastTransaction: immediatePreviousTransaction,
+          newTransactionPayload: {
+            amount: webhookDto.data.amount,
+            chargeType: ChargeType.DEBIT,
+            initiatedBy: immediatePreviousTransaction.initiatedBy,
+            referenceCode: webhookDto.data.tx_ref,
+            type: immediatePreviousTransaction.type,
+            referredBy: immediatePreviousTransaction.referredBy,
+            paymentProcessorType: PaymentProcessor.FLUTTERWAVE,
+            status: TransactionStatus.success,
+          },
+          processorTrxId: webhookDto.data.id,
+        });
+      }
+
+      if (webhookDto.data.status.toLocaleLowerCase() === 'failed') {
+        onFailedPayment({
+          lastTransaction: immediatePreviousTransaction,
+          processorTrxId: webhookDto.data.id,
+        });
+      }
+    }
+
+    if (webhookDto.event === 'subscription.cancelled') {
+      console.log(webhookDto.event);
+
+      const customerEmail = webhookDto.data.customer.email;
+
+      const customer = await this.prismaService.user.findUnique({
+        where: { email: customerEmail },
+        include: { affiliate: true },
+      });
+
+      if (customer.affiliate) {
+        await this.prismaService.subscription.update({
+          where: { affiliateId: customer.affiliate.id },
+          data: { willRenew: false },
+        });
+      }
+    }
   }
 }

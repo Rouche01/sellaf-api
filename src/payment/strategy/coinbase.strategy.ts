@@ -1,25 +1,36 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import { Currency, PaymentProcessor } from '@prisma/client';
 import { CoinbaseService } from 'src/coinbase';
+import { applicationConfig } from 'src/config';
 import { PrismaService } from 'src/prisma';
-import { CreateNewTransactionPayload } from '../interfaces';
 import { generateTransactionRef } from '../utils';
 import {
   InitiatePaymentArgs,
   InitiatePaymentResponse,
-  PaymentStrategy,
+  PaymentStrategyInterface,
+  UseWebhookArgs,
 } from './interfaces';
 
 @Injectable()
-export class CoinbaseStrategy implements PaymentStrategy {
+export class CoinbaseStrategy implements PaymentStrategyInterface {
   constructor(
     private readonly coinbaseService: CoinbaseService,
     private readonly prismaService: PrismaService,
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
   ) {}
   async initiatePayment(
     args: InitiatePaymentArgs,
   ): Promise<InitiatePaymentResponse> {
-    const { amount, description, transactionType, user, paymentMeta } = args;
+    const {
+      amount,
+      description,
+      transactionType,
+      user,
+      paymentMeta,
+      createTransactionRecord,
+    } = args;
     const transactionRef = generateTransactionRef();
     const { paymentLink, status } = await this.coinbaseService.createCharge({
       // hardcoding this just for testing
@@ -40,7 +51,7 @@ export class CoinbaseStrategy implements PaymentStrategy {
       referredById = affiliateUser.referredBy;
     }
 
-    const transaction = await this.createNewTransaction({
+    const transaction = await createTransactionRecord({
       amount: +amount,
       chargeType: 'DEBIT',
       initiatedBy: user.id,
@@ -57,25 +68,15 @@ export class CoinbaseStrategy implements PaymentStrategy {
     };
   }
 
-  private async createNewTransaction(payload: CreateNewTransactionPayload) {
-    const transaction = await this.prismaService.transaction.create({
-      data: {
-        amount: payload.amount,
-        chargeType: payload.chargeType,
-        referenceCode: payload.referenceCode,
-        type: payload.type,
-        address: payload.address,
-        initiatedBy: payload.initiatedBy,
-        referredBy: payload.referredBy,
-        paymentProcessorRef: {
-          create: {
-            type: payload.paymentProcessorType,
-          },
-        },
-        status: payload.status,
-      },
-    });
-
-    return transaction;
+  async useWebhook(args: UseWebhookArgs): Promise<void> {
+    const { webhookSignature } = args;
+    if (
+      !webhookSignature ||
+      webhookSignature !== this.appConfig.coinbase.webhookSecretHash
+    ) {
+      throw new ForbiddenException();
+    }
+    console.log('coinbase webhook');
+    return;
   }
 }

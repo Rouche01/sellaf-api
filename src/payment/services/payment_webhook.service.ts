@@ -1,15 +1,22 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { Transaction, TransactionStatus } from '@prisma/client';
+import { PaymentProcessor, Transaction } from '@prisma/client';
 import add from 'date-fns/add';
 import { AppLoggerService } from 'src/app_logger';
 import { applicationConfig } from 'src/config';
 import { PrismaService } from 'src/prisma';
-import { getDifferenceInSecondsTillNow } from 'src/utils';
 import { WebhookDto } from '../dtos';
+import {
+  OnFailedPaymentArgs,
+  OnSuccessfulPaymentArgs,
+  WebhookCustomHeaders,
+} from '../interfaces';
+import {
+  CoinbaseStrategy,
+  FlutterwaveStrategy,
+  PaymentContext,
+} from '../strategy';
 import { PaymentService } from './payment.service';
-
-const SECONDS_IN_A_DAY = 45 * 60;
 
 @Injectable()
 export class PaymentWebhookService {
@@ -19,101 +26,84 @@ export class PaymentWebhookService {
     private readonly paymentService: PaymentService,
     @Inject(applicationConfig.KEY)
     private readonly appConfig: ConfigType<typeof applicationConfig>,
+    private readonly paymentContext: PaymentContext,
+    private readonly flutterwaveStrategy: FlutterwaveStrategy,
+    private readonly coinbaseStrategy: CoinbaseStrategy,
   ) {}
 
-  async useWebhook(dto: WebhookDto, webhookSignature: string) {
-    if (
-      !webhookSignature ||
-      webhookSignature !== this.appConfig.flutterwave.webhookSecretHash
-    ) {
-      this.logger.log('Wrong webhook signature used to send event');
-      throw new BadRequestException();
-    }
-
-    const transaction = await this.prismaService.transaction.findMany({
-      where: { referenceCode: dto.data.tx_ref },
-      include: { subscription: true },
-      take: -1,
-    });
-
-    const lastTransaction = transaction[0];
-    const timeDifferenceFromLastTrx = getDifferenceInSecondsTillNow(
-      lastTransaction.createdAt,
-    );
-
-    console.log(lastTransaction, timeDifferenceFromLastTrx);
-    if (dto.event === 'charge.completed') {
+  async useWebhook(
+    dto: WebhookDto,
+    paymentProcessor: PaymentProcessor,
+    headers: WebhookCustomHeaders,
+  ) {
+    if (paymentProcessor === PaymentProcessor.COINBASE) {
       console.log(dto);
-      this.logger.log(
-        `Charge completed webhook event received for ${dto.data.tx_ref} transaction`,
-      );
-
-      if (dto.data.status.toLocaleLowerCase() === 'successful') {
-        if (lastTransaction.status !== 'success') {
-          await this.paymentService.updateTransactionStatus(
-            lastTransaction,
-            'success',
-            dto.data.id,
-          );
-          await this.paymentService.activateSubscriptionRelatedToTransaction(
-            lastTransaction,
-          );
-          this.logger.log(`Payment was successful`);
-        } else if (
-          lastTransaction.status === 'success' &&
-          timeDifferenceFromLastTrx > SECONDS_IN_A_DAY
-        ) {
-          const newTransaction = await this.paymentService.createNewTransaction(
-            {
-              amount: dto.data.amount,
-              chargeType: 'DEBIT',
-              initiatedBy: lastTransaction.initiatedBy,
-              referenceCode: dto.data.tx_ref,
-              type: lastTransaction.type,
-              referredBy: lastTransaction.referredBy,
-              paymentProcessorType: 'FLUTTERWAVE',
-              status: TransactionStatus.success,
-            },
-          );
-          await this.renewSubscriptionRelatedToTransaction(
-            lastTransaction,
-            newTransaction,
-          );
-        }
-      }
-
-      if (dto.data.status.toLocaleLowerCase() === 'failed') {
-        // only update the failure status of the last transaction
-        // if it doesn't have a success status to prevent updating
-        // failure status on subscription renewal charge failure
-        // it will be handled in subscription cancel event
-        if (lastTransaction.status !== 'success') {
-          await this.paymentService.updateTransactionStatus(
-            lastTransaction,
-            'failed',
-            dto.data.id,
-          );
-          this.logger.log(`Payment failed`);
-        }
-      }
+      const webhookSignature = headers['x-cc-webhook-signature'];
+      this.paymentContext.setStrategy(this.coinbaseStrategy);
+      return this.paymentContext.useWebhook({
+        onFailedPayment: this.onFailedPayment,
+        onSuccessfulPayment: this.onSuccessfulPayment,
+        webhookDto: dto,
+        webhookSignature,
+      });
     }
 
-    if (dto.event === 'subscription.cancelled') {
-      console.log(dto.event);
-
-      const customerEmail = dto.data.customer.email;
-
-      const customer = await this.prismaService.user.findUnique({
-        where: { email: customerEmail },
-        include: { affiliate: true },
+    if (paymentProcessor === PaymentProcessor.FLUTTERWAVE) {
+      const webhookSignature = headers['verif-hash'];
+      this.paymentContext.setStrategy(this.flutterwaveStrategy);
+      return this.paymentContext.useWebhook({
+        onFailedPayment: this.onFailedPayment,
+        onSuccessfulPayment: this.onSuccessfulPayment,
+        webhookDto: dto,
+        webhookSignature,
       });
+    }
+  }
 
-      if (customer.affiliate) {
-        await this.prismaService.subscription.update({
-          where: { affiliateId: customer.affiliate.id },
-          data: { willRenew: false },
-        });
-      }
+  private async onSuccessfulPayment(args: OnSuccessfulPaymentArgs) {
+    const {
+      isNewTransaction,
+      lastTransaction,
+      newTransactionPayload,
+      processorTrxId,
+    } = args;
+
+    if (lastTransaction.status !== 'success') {
+      await this.paymentService.updateTransactionStatusAndProcessorTrxId(
+        lastTransaction,
+        'success',
+        processorTrxId,
+      );
+      await this.paymentService.activateSubscriptionRelatedToTransaction(
+        lastTransaction,
+      );
+      this.logger.log(`Payment was successful`);
+    } else if (lastTransaction.status === 'success' && isNewTransaction) {
+      const newTransaction = await this.paymentService.createNewTransaction(
+        newTransactionPayload,
+      );
+      await this.renewSubscriptionRelatedToTransaction(
+        lastTransaction,
+        newTransaction,
+      );
+    }
+  }
+
+  private async onFailedPayment(args: OnFailedPaymentArgs) {
+    const { lastTransaction, processorTrxId } = args;
+
+    // only update the failure status of the last transaction
+    // if it doesn't have a success status to prevent updating
+    // failure status on subscription renewal charge failure
+    // it will be handled in subscription cancel event
+
+    if (lastTransaction.status !== 'success') {
+      await this.paymentService.updateTransactionStatusAndProcessorTrxId(
+        lastTransaction,
+        'failed',
+        processorTrxId,
+      );
+      this.logger.log(`Payment failed`);
     }
   }
 

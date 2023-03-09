@@ -58,6 +58,7 @@ export class SubscriptionService {
             transactionType: TransactionType.SUBSCRIPTION,
             subscriptionPlan: SubscriptionPlan.AFFILIATE_DEFAULT,
             description: 'Affiliate Subscription',
+            createTransactionRecord: this.paymentService.createNewTransaction,
           },
           paymentProcessor,
         });

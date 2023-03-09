@@ -23,7 +23,9 @@ import {
   GetBanksQueryDto,
   VerifyTransactionQueryDto,
   WebhookDto,
+  WebhookQueryDto,
 } from './dtos';
+import { WebhookCustomHeaders } from './interfaces';
 import { PaymentService, PaymentWebhookService } from './services';
 
 @Controller('payment')
@@ -82,8 +84,13 @@ export class PaymentController {
   @Post('/webhook')
   async paymentWebhook(
     @Body() dto: WebhookDto,
-    @Headers('verif-hash') webhookSignature: string,
+    @Headers() headers: WebhookCustomHeaders,
+    @Query() query: WebhookQueryDto,
   ) {
-    return this.paymentWebhookService.useWebhook(dto, webhookSignature);
+    return this.paymentWebhookService.useWebhook(
+      dto,
+      query.paymentProcessor as PaymentProcessor,
+      headers,
+    );
   }
 }

@@ -7,7 +7,6 @@ import {
 import {
   Transaction,
   TransactionStatus,
-  Subscription,
   PaymentProcessor,
 } from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
@@ -25,13 +24,10 @@ import {
   CreateBankDetailsPayload,
   CreateNewTransactionPayload,
   HandlePaymentArgs,
+  TransactionWithSubscription,
 } from '../interfaces';
 import { CoinbaseStrategy, FlutterwaveStrategy } from '../strategy';
 import { PaymentContext } from '../strategy';
-
-type TransactionWithSubscription = Transaction & {
-  subscription: Subscription;
-};
 
 @Injectable()
 export class PaymentService {
@@ -150,7 +146,7 @@ export class PaymentService {
         data.amount === dto.expectedAmount &&
         data.currency === dto.transactionCurrency
       ) {
-        await this.updateTransactionStatus(
+        await this.updateTransactionStatusAndProcessorTrxId(
           transaction,
           'success',
           dto.transactionId,
@@ -162,7 +158,7 @@ export class PaymentService {
           message: 'Payment was successful',
         };
       } else {
-        await this.updateTransactionStatus(
+        await this.updateTransactionStatusAndProcessorTrxId(
           transaction,
           'success',
           dto.transactionId,
@@ -175,7 +171,7 @@ export class PaymentService {
         };
       }
     } else {
-      await this.updateTransactionStatus(
+      await this.updateTransactionStatusAndProcessorTrxId(
         transaction,
         data.status as TransactionStatus,
         dto.transactionId,
@@ -228,7 +224,7 @@ export class PaymentService {
     return transaction;
   }
 
-  async updateTransactionStatus(
+  async updateTransactionStatusAndProcessorTrxId(
     transaction: Transaction,
     status: TransactionStatus,
     processorTrxId: string,

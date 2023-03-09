@@ -1,4 +1,14 @@
-import { IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsDefined,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 
 export enum WebhookEvent {
   'charge.completed',
@@ -16,7 +26,7 @@ class CustomerDto {
   name: string;
 }
 
-class WebhookDataDto {
+export class WebhookDataDto {
   @IsNotEmpty()
   @IsString()
   id: string;
@@ -38,12 +48,56 @@ class WebhookDataDto {
   customer: CustomerDto;
 }
 
-export class WebhookDto {
+class CoinbaseWebhookEventMetadata {
+  @IsOptional()
+  @IsString()
+  trx_ref?: string;
+}
+
+class CoinbaseWebhookEventData {
   @IsNotEmpty()
   @IsString()
-  event: string;
+  id: string;
+
+  @IsDefined()
+  @IsObject()
+  metadata: CoinbaseWebhookEventMetadata;
+}
+
+class CoinbaseWebhookEvent {
+  @IsNotEmpty()
+  @IsString()
+  id: string;
 
   @IsNotEmpty()
+  @IsString()
+  type: string;
+
+  @IsDefined()
   @IsObject()
-  data: WebhookDataDto;
+  data: CoinbaseWebhookEventData;
+}
+
+@ValidatorConstraint({ name: 'string-or-coinbase-event', async: false })
+class IsStringOrCoinbaseEvent implements ValidatorConstraintInterface {
+  validate(value: any) {
+    return (
+      (typeof value === 'object' && 'type' in value) ||
+      typeof value === 'string'
+    );
+  }
+
+  defaultMessage(validationArguments: ValidationArguments) {
+    return `${validationArguments.targetName} must be string or coinbase event object`;
+  }
+}
+
+export class WebhookDto {
+  @IsDefined()
+  @Validate(IsStringOrCoinbaseEvent)
+  event: CoinbaseWebhookEvent | string;
+
+  @IsOptional()
+  @IsObject()
+  data?: WebhookDataDto;
 }
