@@ -1,9 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ConfigType } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { PaymentProcessor, Transaction } from '@prisma/client';
 import add from 'date-fns/add';
 import { AppLoggerService } from 'src/app_logger';
-import { applicationConfig } from 'src/config';
 import { PrismaService } from 'src/prisma';
 import { WebhookDto } from '../dtos';
 import {
@@ -24,8 +22,6 @@ export class PaymentWebhookService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly paymentService: PaymentService,
-    @Inject(applicationConfig.KEY)
-    private readonly appConfig: ConfigType<typeof applicationConfig>,
     private readonly paymentContext: PaymentContext,
     private readonly flutterwaveStrategy: FlutterwaveStrategy,
     private readonly coinbaseStrategy: CoinbaseStrategy,
@@ -35,9 +31,10 @@ export class PaymentWebhookService {
     dto: WebhookDto,
     paymentProcessor: PaymentProcessor,
     headers: WebhookCustomHeaders,
+    rawBody: Buffer,
   ) {
     if (paymentProcessor === PaymentProcessor.COINBASE) {
-      console.log(dto);
+      console.log(dto, headers);
       const webhookSignature = headers['x-cc-webhook-signature'];
       this.paymentContext.setStrategy(this.coinbaseStrategy);
       return this.paymentContext.useWebhook({
@@ -45,6 +42,7 @@ export class PaymentWebhookService {
         onSuccessfulPayment: this.onSuccessfulPayment,
         webhookDto: dto,
         webhookSignature,
+        rawBody,
       });
     }
 

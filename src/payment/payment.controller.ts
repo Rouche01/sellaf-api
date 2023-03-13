@@ -6,6 +6,8 @@ import {
   Inject,
   Post,
   Query,
+  RawBodyRequest,
+  Req,
 } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { PaymentProcessor } from '@prisma/client';
@@ -86,11 +88,13 @@ export class PaymentController {
     @Body() dto: WebhookDto,
     @Headers() headers: WebhookCustomHeaders,
     @Query() query: WebhookQueryDto,
+    @Req() req: RawBodyRequest<Request>,
   ) {
     return this.paymentWebhookService.useWebhook(
       dto,
       query.paymentProcessor as PaymentProcessor,
       headers,
+      req.rawBody,
     );
   }
 }

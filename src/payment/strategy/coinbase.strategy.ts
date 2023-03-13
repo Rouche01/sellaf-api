@@ -69,14 +69,38 @@ export class CoinbaseStrategy implements PaymentStrategyInterface {
   }
 
   async useWebhook(args: UseWebhookArgs): Promise<void> {
-    const { webhookSignature } = args;
-    if (
-      !webhookSignature ||
-      webhookSignature !== this.appConfig.coinbase.webhookSecretHash
-    ) {
+    const { webhookSignature, rawBody } = args;
+    const isLegit = this.coinbaseService.verifySignatureHeader(
+      rawBody,
+      webhookSignature,
+      this.appConfig.coinbase.webhookSecretHash,
+    );
+    if (!webhookSignature || !isLegit) {
       throw new ForbiddenException();
     }
     console.log('coinbase webhook');
     return;
   }
+
+  // private async createNewTransaction(payload: CreateNewTransactionPayload) {
+  //   const transaction = await this.prismaService.transaction.create({
+  //     data: {
+  //       amount: payload.amount,
+  //       chargeType: payload.chargeType,
+  //       referenceCode: payload.referenceCode,
+  //       type: payload.type,
+  //       address: payload.address,
+  //       initiatedBy: payload.initiatedBy,
+  //       referredBy: payload.referredBy,
+  //       paymentProcessorRef: {
+  //         create: {
+  //           type: payload.paymentProcessorType,
+  //         },
+  //       },
+  //       status: payload.status,
+  //     },
+  //   });
+
+  //   return transaction;
+  // }
 }

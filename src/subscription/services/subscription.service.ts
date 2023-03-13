@@ -125,6 +125,8 @@ export class SubscriptionService {
     try {
       const subscription = await this.fetchSubscriptionWithId(subId, user);
 
+      console.log(subscription);
+
       if (!subscription) {
         throw new NotFoundException('Subscription not found');
       }

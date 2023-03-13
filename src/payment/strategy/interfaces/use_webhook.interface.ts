@@ -9,4 +9,5 @@ export interface UseWebhookArgs {
   webhookSignature: string;
   onSuccessfulPayment: (args: OnSuccessfulPaymentArgs) => Promise<void>;
   onFailedPayment: (args: OnFailedPaymentArgs) => Promise<void>;
+  rawBody?: Buffer;
 }

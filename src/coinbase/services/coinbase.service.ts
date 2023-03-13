@@ -5,6 +5,7 @@ import { lastValueFrom } from 'rxjs';
 import { AppLoggerService } from 'src/app_logger';
 import { applicationConfig } from 'src/config';
 import { CreateChargePayload, CreateChargeResponse } from '../interfaces';
+import { computeSignature, secureCompare } from '../util';
 
 @Injectable()
 export class CoinbaseService {
@@ -48,5 +49,13 @@ export class CoinbaseService {
       this.logger.error(err?.response?.data || err?.message);
       throw err;
     }
+  }
+
+  verifySignatureHeader(rawBody: Buffer, signature: string, secret: string) {
+    const computedSignature = computeSignature(rawBody, secret);
+    if (!secureCompare(computedSignature, signature)) {
+      return false;
+    }
+    return true;
   }
 }

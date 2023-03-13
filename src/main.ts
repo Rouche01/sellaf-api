@@ -9,7 +9,7 @@ import { badRequestExceptionFilter } from './filters';
 import { PlatformSetupService } from './platform_setup';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   await app.get(PlatformSetupService).createPlatformManager();
   app.setGlobalPrefix('api', { exclude: ['/admin/queues'] });
   app.useGlobalPipes(

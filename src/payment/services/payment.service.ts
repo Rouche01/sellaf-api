@@ -89,7 +89,7 @@ export class PaymentService {
           throw new NotFoundException('Store does not exist');
         }
 
-        await this.createBankDetails({ ...bankUpdateData, storeId: store.id });
+        await this._createBankDetails({ ...bankUpdateData, storeId: store.id });
       }
 
       if (applyTo === 'affiliate') {
@@ -101,7 +101,7 @@ export class PaymentService {
           throw new NotFoundException('Affiliate does not exist');
         }
 
-        await this.createBankDetails({
+        await this._createBankDetails({
           ...bankUpdateData,
           affiliateId: affiliate.id,
         });
@@ -187,6 +187,8 @@ export class PaymentService {
     const subscriptionByTrxId =
       await this.flutterwaveService.getSubscriptionByTrxId(transactionId);
 
+    this.logger.log(subscriptionByTrxId);
+
     if (subscriptionByTrxId.length === 0) {
       throw new ConflictException(
         'Transaction subscription not found in payment processor',
@@ -251,7 +253,7 @@ export class PaymentService {
     }
   }
 
-  private async createBankDetails(
+  private async _createBankDetails(
     bankDetailsPayload: CreateBankDetailsPayload,
   ) {
     await this.prismaService.bank.create({
