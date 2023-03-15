@@ -14,6 +14,7 @@ import { PrismaService } from 'src/prisma';
 import { getDifferenceInSecondsTillNow } from 'src/utils';
 import { SECONDS_IN_A_DAY } from '../constants';
 import { generateTransactionRef } from '../utils';
+import { BaseStrategy } from './base_strategy.strategy';
 import {
   FetchBanksArgs,
   FetchBanksResponse,
@@ -24,27 +25,26 @@ import {
 } from './interfaces';
 
 @Injectable()
-export class FlutterwaveStrategy implements PaymentStrategyInterface {
+export class FlutterwaveStrategy
+  extends BaseStrategy
+  implements PaymentStrategyInterface
+{
   private readonly logger = new AppLoggerService(FlutterwaveStrategy.name);
 
   constructor(
-    private readonly prismaService: PrismaService,
+    protected readonly prismaService: PrismaService,
     private readonly flutterwaveService: FlutterwaveService,
     @Inject(applicationConfig.KEY)
     private readonly appConfig: ConfigType<typeof applicationConfig>,
-  ) {}
+  ) {
+    super(prismaService);
+  }
 
   async initiatePayment(
     args: InitiatePaymentArgs,
   ): Promise<InitiatePaymentResponse> {
-    const {
-      amount,
-      paymentMeta,
-      transactionType,
-      user,
-      subscriptionPlan,
-      createTransactionRecord,
-    } = args;
+    const { amount, paymentMeta, transactionType, user, subscriptionPlan } =
+      args;
     const transactionRef = generateTransactionRef();
 
     let referredById: number;
@@ -78,7 +78,7 @@ export class FlutterwaveStrategy implements PaymentStrategyInterface {
       await this.flutterwaveService.payWithStandardFlow(payload);
 
     // create a new transaction here not tied to any subscription
-    const transaction = await createTransactionRecord({
+    const transaction = await this.createNewTransaction({
       amount: +amount,
       chargeType: 'DEBIT',
       initiatedBy: user.id,

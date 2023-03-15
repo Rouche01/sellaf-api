@@ -10,9 +10,7 @@ import {
 export class PaymentContext {
   private strategy: PaymentStrategyInterface;
 
-  // constructor(strategy: PaymentStrategy) {
-  //   this.strategy = strategy;
-  // }
+  // constructor(private readonly prismaService: PrismaService) {}
 
   setStrategy(strategy: PaymentStrategyInterface) {
     this.strategy = strategy;

@@ -19,6 +19,7 @@ type UserResponse = User & {
 
 export const transformUserResponse = (user: UserResponse) => {
   const roles = user.userRoles.map((userRole) => userRole.role);
+  console.log(user);
   return {
     id: user.id,
     email: user.email,
@@ -27,7 +28,7 @@ export const transformUserResponse = (user: UserResponse) => {
     userName: user.username,
     keycloakUserId: user.keycloakUserId,
     phoneNumber: user?.affiliate.phoneNumber || user?.seller.phoneNumber,
-    verified: user?.affiliate.active || user?.seller.active,
+    verified: user?.affiliate ? user.affiliate.active : user.seller.active,
     roles,
     ...(user.affiliate && { affiliateCode: user.affiliate.affiliateCode }),
   };

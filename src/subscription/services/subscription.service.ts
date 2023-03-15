@@ -20,8 +20,8 @@ import { PrismaService } from 'src/prisma';
 import { AddRenewSubscriptionJobData } from '../interfaces';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
-import { BullBoardService } from 'src/bull_board';
 import { getDifferenceInMsFromNow } from '../../utils';
+import { QueueManagerService } from 'src/queue_manager/services';
 
 @Injectable()
 export class SubscriptionService {
@@ -31,10 +31,8 @@ export class SubscriptionService {
     private readonly paymentService: PaymentService,
     @InjectQueue(RENEW_SUBSCRIPTION_QUEUE)
     private readonly renewSubscriptionQueue: Queue<AddRenewSubscriptionJobData>,
-    private readonly bullBoardService: BullBoardService,
-  ) {
-    this.bullBoardService.addToQueuePool(this.renewSubscriptionQueue);
-  }
+    private readonly queueManagerService: QueueManagerService,
+  ) {}
 
   async createAffiliateSubscription(
     user: AuthenticatedUser,
@@ -58,7 +56,6 @@ export class SubscriptionService {
             transactionType: TransactionType.SUBSCRIPTION,
             subscriptionPlan: SubscriptionPlan.AFFILIATE_DEFAULT,
             description: 'Affiliate Subscription',
-            createTransactionRecord: this.paymentService.createNewTransaction,
           },
           paymentProcessor,
         });
@@ -142,12 +139,12 @@ export class SubscriptionService {
         );
 
       if (paymentSubscription.status === 'cancelled') {
-        const renewJob = await this.bullBoardService.getQueueJob(
+        const renewJob = await this.queueManagerService.getQueueJob(
           subId.toString(),
           this.renewSubscriptionQueue,
         );
         if (renewJob) {
-          await this.bullBoardService.removeQueueJob(
+          await this.queueManagerService.removeQueueJob(
             subId.toString(),
             this.renewSubscriptionQueue,
           );

@@ -1,7 +1,6 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { Queue, Job } from 'bullmq';
-import { BullBoardService } from 'src/bull_board';
 import { SEND_EMAIL_QUEUE } from 'src/constants';
 import { EmailJobData } from '../interfaces';
 
@@ -10,10 +9,7 @@ export class EmailService {
   constructor(
     @InjectQueue(SEND_EMAIL_QUEUE)
     private readonly emailQueue: Queue<EmailJobData>,
-    private readonly bullBoardService: BullBoardService,
-  ) {
-    this.bullBoardService.addToQueuePool(this.emailQueue);
-  }
+  ) {}
 
   async addEmailJob<T extends { [key: string]: any }>({
     template,

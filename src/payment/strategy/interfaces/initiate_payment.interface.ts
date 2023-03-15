@@ -1,6 +1,5 @@
-import { SubscriptionPlan, TransactionType, Transaction } from '@prisma/client';
+import { SubscriptionPlan, TransactionType } from '@prisma/client';
 import { AuthenticatedUser } from 'src/interfaces';
-import { CreateNewTransactionPayload } from 'src/payment/interfaces';
 
 export interface InitiatePaymentArgs {
   user: AuthenticatedUser;
@@ -9,7 +8,6 @@ export interface InitiatePaymentArgs {
   transactionType: TransactionType;
   subscriptionPlan?: SubscriptionPlan;
   description?: string;
-  createTransactionRecord: (payload: CreateNewTransactionPayload) => Promise<Transaction>;
 }
 
 export interface InitiatePaymentResponse {

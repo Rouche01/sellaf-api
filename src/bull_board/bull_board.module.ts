@@ -1,12 +1,12 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardService } from './services';
-import { mailBullConfig } from 'src/config';
+import { bullMqConfig } from 'src/config';
 import { ExpressAdapter } from '@bull-board/express';
 import { createBullBoard } from '@bull-board/api';
 
 @Module({
-  imports: [BullModule.forRoot(mailBullConfig)],
+  imports: [BullModule.forRoot(bullMqConfig)],
   providers: [BullBoardService],
   exports: [BullBoardService],
 })

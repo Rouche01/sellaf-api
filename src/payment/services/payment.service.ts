@@ -204,8 +204,11 @@ export class PaymentService {
     );
   }
 
-  async createNewTransaction(payload: CreateNewTransactionPayload) {
-    const transaction = await this.prismaService.transaction.create({
+  async createNewTransaction(
+    payload: CreateNewTransactionPayload,
+    prismaService: PrismaService = this.prismaService,
+  ) {
+    const transaction = await prismaService.transaction.create({
       data: {
         amount: payload.amount,
         chargeType: payload.chargeType,

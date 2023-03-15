@@ -1,10 +1,12 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { Currency, PaymentProcessor } from '@prisma/client';
+import { Currency, PaymentProcessor, TransactionStatus } from '@prisma/client';
+import { AppLoggerService } from 'src/app_logger';
 import { CoinbaseService } from 'src/coinbase';
 import { applicationConfig } from 'src/config';
 import { PrismaService } from 'src/prisma';
 import { generateTransactionRef } from '../utils';
+import { BaseStrategy } from './base_strategy.strategy';
 import {
   InitiatePaymentArgs,
   InitiatePaymentResponse,
@@ -13,24 +15,23 @@ import {
 } from './interfaces';
 
 @Injectable()
-export class CoinbaseStrategy implements PaymentStrategyInterface {
+export class CoinbaseStrategy
+  extends BaseStrategy
+  implements PaymentStrategyInterface
+{
+  private readonly logger = new AppLoggerService(CoinbaseStrategy.name);
   constructor(
     private readonly coinbaseService: CoinbaseService,
-    private readonly prismaService: PrismaService,
+    protected readonly prismaService: PrismaService,
     @Inject(applicationConfig.KEY)
     private readonly appConfig: ConfigType<typeof applicationConfig>,
-  ) {}
+  ) {
+    super(prismaService);
+  }
   async initiatePayment(
     args: InitiatePaymentArgs,
   ): Promise<InitiatePaymentResponse> {
-    const {
-      amount,
-      description,
-      transactionType,
-      user,
-      paymentMeta,
-      createTransactionRecord,
-    } = args;
+    const { amount, description, transactionType, user, paymentMeta } = args;
     const transactionRef = generateTransactionRef();
     const { paymentLink, status } = await this.coinbaseService.createCharge({
       // hardcoding this just for testing
@@ -51,7 +52,7 @@ export class CoinbaseStrategy implements PaymentStrategyInterface {
       referredById = affiliateUser.referredBy;
     }
 
-    const transaction = await createTransactionRecord({
+    const transaction = await this.createNewTransaction({
       amount: +amount,
       chargeType: 'DEBIT',
       initiatedBy: user.id,
@@ -69,7 +70,7 @@ export class CoinbaseStrategy implements PaymentStrategyInterface {
   }
 
   async useWebhook(args: UseWebhookArgs): Promise<void> {
-    const { webhookSignature, rawBody } = args;
+    const { webhookSignature, rawBody, webhookDto } = args;
     const isLegit = this.coinbaseService.verifySignatureHeader(
       rawBody,
       webhookSignature,
@@ -79,28 +80,74 @@ export class CoinbaseStrategy implements PaymentStrategyInterface {
       throw new ForbiddenException();
     }
     console.log('coinbase webhook');
+    if (typeof webhookDto.event === 'object') {
+      const transactionReference = webhookDto.event.data.metadata.trx_ref;
+
+      if (webhookDto.event.type === 'charge:created') {
+        this.logger.log(
+          `Charge created webhook event received for ${transactionReference} transaction`,
+        );
+        this._onChargeCreatedEvent(
+          transactionReference,
+          webhookDto.event.data.id,
+        );
+      }
+
+      if (webhookDto.event.type === 'charge:pending') {
+        this.logger.log(
+          `Charge pending webhook event received for ${transactionReference} transaction`,
+        );
+        console.log(webhookDto.event.type);
+        this._onPendingPaymentEvent(transactionReference);
+      }
+
+      if (webhookDto.event.type === 'charge:confirmed') {
+        this.logger.log(
+          `Charge confirmed and successful webhook event received for ${transactionReference} transaction`,
+        );
+      }
+    }
     return;
   }
 
-  // private async createNewTransaction(payload: CreateNewTransactionPayload) {
-  //   const transaction = await this.prismaService.transaction.create({
-  //     data: {
-  //       amount: payload.amount,
-  //       chargeType: payload.chargeType,
-  //       referenceCode: payload.referenceCode,
-  //       type: payload.type,
-  //       address: payload.address,
-  //       initiatedBy: payload.initiatedBy,
-  //       referredBy: payload.referredBy,
-  //       paymentProcessorRef: {
-  //         create: {
-  //           type: payload.paymentProcessorType,
-  //         },
-  //       },
-  //       status: payload.status,
-  //     },
-  //   });
+  private async _onChargeCreatedEvent(referenceCode: string, chargeId: string) {
+    const transaction = await this.prismaService.transaction.findFirst({
+      where: { referenceCode },
+    });
 
-  //   return transaction;
-  // }
+    await this.prismaService.transaction.update({
+      where: { id: transaction.id },
+      data: {
+        paymentProcessorRef: { update: { trxId: chargeId, referenceCode } },
+      },
+    });
+  }
+
+  private async _onPendingPaymentEvent(referenceCode: string) {
+    const transaction = await this.prismaService.transaction.findFirst({
+      where: { referenceCode },
+    });
+
+    await this.prismaService.transaction.update({
+      where: { id: transaction.id },
+      data: { status: TransactionStatus.pending },
+    });
+  }
+
+  private async _onSuccessfulPaymentEvent(referenceCode: string) {
+    const transaction = await this.prismaService.transaction.findFirst({
+      where: { referenceCode },
+      include: { subscription: true },
+    });
+
+    await this.prismaService.transaction.update({
+      where: { id: transaction.id },
+      data: { status: TransactionStatus.success },
+    });
+
+    // activate subscription if transaction is for a subscription payment
+    if (transaction.subscription) {
+      this.activateSubscriptionForTransaction(transaction);
+    }
+  }
 }
