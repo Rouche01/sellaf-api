@@ -1,10 +1,18 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { Currency, PaymentProcessor, TransactionStatus } from '@prisma/client';
+import { Queue } from 'bullmq';
 import { AppLoggerService } from 'src/app_logger';
 import { CoinbaseService } from 'src/coinbase';
 import { applicationConfig } from 'src/config';
+import { TERMINATE_SUBSCRIPTION_QUEUE } from 'src/constants';
 import { PrismaService } from 'src/prisma';
+import {
+  TerminateSubscriptionJobData,
+  QueueManagerService,
+} from 'src/queue_manager';
+import { getDifferenceInMsFromNow } from 'src/utils';
 import { generateTransactionRef } from '../utils';
 import { BaseStrategy } from './base_strategy.strategy';
 import {
@@ -25,6 +33,9 @@ export class CoinbaseStrategy
     protected readonly prismaService: PrismaService,
     @Inject(applicationConfig.KEY)
     private readonly appConfig: ConfigType<typeof applicationConfig>,
+    @InjectQueue(TERMINATE_SUBSCRIPTION_QUEUE)
+    private readonly terminateSubQueue: Queue<TerminateSubscriptionJobData>,
+    private readonly queueManagerService: QueueManagerService,
   ) {
     super(prismaService);
   }
@@ -102,6 +113,7 @@ export class CoinbaseStrategy
       }
 
       if (webhookDto.event.type === 'charge:confirmed') {
+        const userEmail = webhookDto.event.data.metadata.emailAddress;
         this.logger.log(
           `Charge confirmed and successful webhook event received for ${transactionReference} transaction`,
         );
@@ -134,7 +146,10 @@ export class CoinbaseStrategy
     });
   }
 
-  private async _onSuccessfulPaymentEvent(referenceCode: string) {
+  private async _onSuccessfulPaymentEvent(
+    referenceCode: string,
+    userEmail: string,
+  ) {
     const transaction = await this.prismaService.transaction.findFirst({
       where: { referenceCode },
       include: { subscription: true },
@@ -147,7 +162,22 @@ export class CoinbaseStrategy
 
     // activate subscription if transaction is for a subscription payment
     if (transaction.subscription) {
-      this.activateSubscriptionForTransaction(transaction);
+      await this.activateSubscriptionForTransaction(transaction);
+
+      // create a terminate subscription job to end subscription when
+      // the subscription cycle ends and send an email to renew subscription
+      // since coinbase does not provide functionality for recurring payment
+      await this.queueManagerService.addJob<TerminateSubscriptionJobData>({
+        data: {
+          paymentProcessor: PaymentProcessor.COINBASE,
+          userEmail,
+          subscription: transaction.subscription,
+        },
+        jobDelay: getDifferenceInMsFromNow(transaction.subscription.endDate),
+        jobId: transaction.subscriptionId.toString(),
+        jobName: 'Terminate Subscription',
+        queueName: 'TERMINATE_SUBSCRIPTION_QUEUE',
+      });
     }
   }
 }

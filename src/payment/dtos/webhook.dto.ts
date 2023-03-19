@@ -52,6 +52,10 @@ class CoinbaseWebhookEventMetadata {
   @IsOptional()
   @IsString()
   trx_ref?: string;
+
+  @IsOptional()
+  @IsString()
+  emailAddress?: string;
 }
 
 class CoinbaseWebhookEventData {

@@ -17,11 +17,13 @@ import {
 import { AuthenticatedUser } from 'src/interfaces';
 import { PaymentService } from 'src/payment';
 import { PrismaService } from 'src/prisma';
-import { AddRenewSubscriptionJobData } from '../interfaces';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { getDifferenceInMsFromNow } from '../../utils';
-import { QueueManagerService } from 'src/queue_manager/services';
+import {
+  QueueManagerService,
+  RenewSubscriptionJobData,
+} from 'src/queue_manager';
 
 @Injectable()
 export class SubscriptionService {
@@ -30,7 +32,7 @@ export class SubscriptionService {
     private readonly prismaService: PrismaService,
     private readonly paymentService: PaymentService,
     @InjectQueue(RENEW_SUBSCRIPTION_QUEUE)
-    private readonly renewSubscriptionQueue: Queue<AddRenewSubscriptionJobData>,
+    private readonly renewSubscriptionQueue: Queue<RenewSubscriptionJobData>,
     private readonly queueManagerService: QueueManagerService,
   ) {}
 
@@ -45,6 +47,7 @@ export class SubscriptionService {
       const paymentMeta = {
         subscriptionPlan: affiliate.plan,
         affiliateId: affiliate.affiliateCode,
+        emailAddress: user.email,
       };
 
       const { paymentLink, status, transactionId } =
@@ -216,7 +219,7 @@ export class SubscriptionService {
   async deactivateSubscription(subId: number) {
     await this.prismaService.subscription.update({
       where: { id: subId },
-      data: { active: false, activeTransactionId: null },
+      data: { active: false, activeTransactionId: null, willRenew: false },
     });
   }
 
@@ -233,10 +236,10 @@ export class SubscriptionService {
   }
 
   private async addRenewSubscriptionJob(
-    addRenewJobData: AddRenewSubscriptionJobData,
+    addRenewJobData: RenewSubscriptionJobData,
     renewDate: Date,
     jobId: string,
-  ): Promise<Job<AddRenewSubscriptionJobData>> {
+  ): Promise<Job<RenewSubscriptionJobData>> {
     return this.renewSubscriptionQueue.add(
       `add renew subscription job - ${jobId}`,
       addRenewJobData,

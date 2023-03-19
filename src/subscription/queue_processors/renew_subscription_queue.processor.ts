@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { RENEW_SUBSCRIPTION_QUEUE } from 'src/constants';
-import { AddRenewSubscriptionJobData } from '../interfaces';
+import { RenewSubscriptionJobData } from 'src/queue_manager';
 import { SubscriptionService } from '../services';
 import { getDifferenceInSecondsFromNow } from '../../utils';
 
@@ -13,7 +13,7 @@ export class RenewSubscriptionConsumer extends WorkerHost {
     super();
   }
 
-  async process(job: Job<AddRenewSubscriptionJobData>): Promise<void> {
+  async process(job: Job<RenewSubscriptionJobData>): Promise<void> {
     const { user, paymentProcessor } = job.data;
     const activeSubscription =
       await this.subscriptionService.getAffiliateActiveSubscription(user);

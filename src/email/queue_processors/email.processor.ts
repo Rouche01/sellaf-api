@@ -2,7 +2,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { SEND_EMAIL_QUEUE } from 'src/constants';
-import { EmailJobData } from '../interfaces';
+import { SendEmailJobData } from 'src/queue_manager';
 
 @Processor(SEND_EMAIL_QUEUE)
 export class EmailConsumer extends WorkerHost {
@@ -10,7 +10,7 @@ export class EmailConsumer extends WorkerHost {
     super();
   }
 
-  async process(job: Job<EmailJobData>): Promise<void> {
+  async process(job: Job<SendEmailJobData>): Promise<void> {
     await this.mailerService.sendMail({
       from: '"Sellaf Africa" <noreply@adverts247.com>',
       to: job.data.recepient,
