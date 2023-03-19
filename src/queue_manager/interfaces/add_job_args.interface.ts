@@ -5,5 +5,5 @@ export interface AddJobArgs<T> {
   jobName: string;
   jobId: string;
   data: T;
-  jobDelay: number;
+  jobDelay?: number;
 }

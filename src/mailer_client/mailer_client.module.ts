@@ -1,18 +1,19 @@
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { Module } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import { join } from 'path';
 import { applicationConfig } from 'src/config';
 
 @Module({
   imports: [
     MailerModule.forRootAsync({
-      useFactory: () => ({
+      useFactory: (appConfig: ConfigType<typeof applicationConfig>) => ({
         transport: {
-          host: applicationConfig().smtpHost,
+          host: appConfig.smtpHost,
           auth: {
-            user: applicationConfig().smtpUsername,
-            pass: applicationConfig().smtpPassword,
+            user: appConfig.smtpUsername,
+            pass: appConfig.smtpPassword,
           },
         },
         template: {
@@ -21,6 +22,7 @@ import { applicationConfig } from 'src/config';
           adapter: new HandlebarsAdapter(),
         },
       }),
+      inject: [applicationConfig.KEY],
     }),
   ],
 })
