@@ -10,13 +10,17 @@ import {
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { AuthUserPipe } from 'src/pipes';
 import { UserService } from './services';
-import { AuthenticatedUser as AuthenticatedUserType } from 'src/interfaces';
+import {
+  AuthenticatedUser as AuthenticatedUserType,
+  ROLES,
+} from 'src/interfaces';
 import { AffiliateReferralResponse } from './interfaces';
 import {
   EditUserDto,
   EditUserQueryDto,
   GetAffiliateReferralsQueryDto,
 } from './dtos';
+import { EditUserEmailDto } from './dtos/edit_user.dto';
 
 @Controller('user')
 export class UserController {
@@ -41,14 +45,34 @@ export class UserController {
 
   @Roles({ roles: ['realm:affiliate'] })
   @Patch(':id')
-  async editUserInfo(
+  async updateUserInfo(
     @Param('id', ParseIntPipe) userId: number,
     @Query() query: EditUserQueryDto,
     @Body() dto: EditUserDto,
   ) {
-    if (query.userType === 'affiliate') {
-      this.userService.updateAffiliateUserInfo(dto, userId);
+    if (query.userType === ROLES.AFFILIATE) {
+      return this.userService.updateAffiliateUserInfo(dto, userId);
     }
-    return 'edit user';
+  }
+
+  @Roles({ roles: ['realm:affiliate'] })
+  @Patch(':id/email')
+  async updateUserEmail(
+    @Param('id', ParseIntPipe) userId: number,
+    @Query() query: EditUserQueryDto,
+    @Body() dto: EditUserEmailDto,
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+  ) {
+    if (query.userType === ROLES.AFFILIATE) {
+      await this.userService.verifyUserEmailAndPassword(
+        user,
+        dto.password,
+        dto.email,
+      );
+      return this.userService.updateAffiliateUserInfo(
+        { emailAddress: dto.email },
+        userId,
+      );
+    }
   }
 }

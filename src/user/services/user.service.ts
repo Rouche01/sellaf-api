@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { KeycloakUserService } from 'src/account';
 import { AppLoggerService } from 'src/app_logger';
-import { TransformedUser } from 'src/interfaces';
+import { AuthenticatedUser, TransformedUser } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
-import { EditUserDto } from '../dtos';
 import { GetAffiliateReferralsQueryDto } from '../dtos/get_affiliate_referrals_query.dto';
+import { EditUserInfoPayload } from '../interfaces';
 import { transformUserResponse } from '../utils';
 
 @Injectable()
@@ -81,11 +85,34 @@ export class UserService {
     };
   }
 
-  async updateAffiliateUserInfo(editUserPayload: EditUserDto, userId: number) {
-    const { firstName, lastName, phoneNumber } = editUserPayload;
+  async verifyUserEmailAndPassword(
+    user: AuthenticatedUser,
+    password: string,
+    email: string,
+  ) {
+    const emailExists = await this.prismaService.user.findUnique({
+      where: { email },
+    });
+
+    if (emailExists) {
+      throw new BadRequestException('User with this email exists');
+    }
+
+    await this.keycloakUserService.loginKeycloakUser(
+      user.preferred_username,
+      password,
+    );
+  }
+
+  async updateAffiliateUserInfo(
+    editUserPayload: EditUserInfoPayload,
+    userId: number,
+  ) {
+    const { firstName, lastName, phoneNumber, emailAddress } = editUserPayload;
     try {
       const user = await this.prismaService.user.findUnique({
         where: { id: userId },
+        include: { affiliate: true },
       });
 
       if (!user) {
@@ -95,8 +122,10 @@ export class UserService {
       await this.keycloakUserService.updateKeycloakUser(user.keycloakUserId, {
         firstName,
         lastName,
+        email: emailAddress,
         attributes: {
-          phoneNumber,
+          phoneNumber: phoneNumber || user.affiliate.phoneNumber,
+          affiliateId: user.affiliate.affiliateCode,
         },
       });
 
@@ -105,12 +134,13 @@ export class UserService {
         data: {
           firstName,
           lastName,
+          email: emailAddress,
           affiliate: { update: { phoneNumber } },
         },
       });
       return {
         status: 'success',
-        message: 'User info updated successfully.',
+        message: 'User information updated successfully.',
       };
     } catch (err) {
       this.logger.error(
