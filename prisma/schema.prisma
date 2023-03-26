@@ -267,4 +267,6 @@ model Bank {
 
   storeId Int?   @unique
   store   Store? @relation(fields: [storeId], references: [id])
+
+  @@map("bank")
 }
