@@ -12,8 +12,4 @@ export class AddBankDto {
   @IsString()
   @IsNotEmpty()
   beneficiaryName: string;
-
-  @IsString()
-  @IsNotEmpty()
-  accountName: string;
 }

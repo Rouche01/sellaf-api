@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import {
+  AddTransferBeneficiariesArgs,
+  DeleteTransferBeneficiariesArgs,
   FetchBanksArgs,
   InitiatePaymentArgs,
   PaymentStrategyInterface,
+  ResolveAccountNumberArgs,
   UseWebhookArgs,
 } from '../interfaces';
 
@@ -22,6 +25,20 @@ export class PaymentContext {
 
   fetchBankList(fetchBankArgs: FetchBanksArgs) {
     return this.strategy.getBankList(fetchBankArgs);
+  }
+
+  resolveBankAccountNumber(resolveArgs: ResolveAccountNumberArgs) {
+    return this.strategy.resolveBankAccountNumber(resolveArgs);
+  }
+
+  addTransferBeneficiaries(addBeneficiariesArgs: AddTransferBeneficiariesArgs) {
+    return this.strategy.addTransferBeneficiaries(addBeneficiariesArgs);
+  }
+
+  deleteTransferBeneficiaries(
+    deleteBeneficiariesArgs: DeleteTransferBeneficiariesArgs,
+  ) {
+    return this.strategy.deleteTransferBeneficiaries(deleteBeneficiariesArgs);
   }
 
   useWebhook(useWebhookArgs: UseWebhookArgs): Promise<void> {

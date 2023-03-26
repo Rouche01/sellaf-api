@@ -1,12 +1,9 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { Currency, PaymentProcessor, TransactionStatus } from '@prisma/client';
-import { Queue } from 'bullmq';
 import { AppLoggerService } from 'src/app_logger';
 import { CoinbaseService } from 'src/coinbase';
 import { applicationConfig } from 'src/config';
-import { TERMINATE_SUBSCRIPTION_QUEUE } from 'src/constants';
 import { PrismaService } from 'src/prisma';
 import {
   TerminateSubscriptionJobData,
@@ -33,8 +30,6 @@ export class CoinbaseStrategy
     protected readonly prismaService: PrismaService,
     @Inject(applicationConfig.KEY)
     private readonly appConfig: ConfigType<typeof applicationConfig>,
-    @InjectQueue(TERMINATE_SUBSCRIPTION_QUEUE)
-    private readonly terminateSubQueue: Queue<TerminateSubscriptionJobData>,
     private readonly queueManagerService: QueueManagerService,
   ) {
     super(prismaService);
@@ -117,6 +112,7 @@ export class CoinbaseStrategy
         this.logger.log(
           `Charge confirmed and successful webhook event received for ${transactionReference} transaction`,
         );
+        this._onSuccessfulPaymentEvent(transactionReference, userEmail);
       }
     }
     return;

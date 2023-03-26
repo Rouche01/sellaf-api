@@ -24,7 +24,7 @@ export class FlutterwaveInterceptor implements NestInterceptor {
     // TO-DO: Conditionally use test key or live key based on the app environment
     this.httpService.axiosRef.defaults.headers.common[
       'Authorization'
-    ] = `Bearer ${this.appConfig.flutterwave.testSecretKey}`;
+    ] = `Bearer ${this.appConfig.flutterwave.liveSecretKey}`;
     return next.handle().pipe();
   }
 }

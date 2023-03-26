@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { AccountModule } from 'src/account';
 import { CoinbaseModule } from 'src/coinbase';
 import { FlutterwaveModule } from 'src/flutterwave';
+import { QueueManagerModule } from 'src/queue_manager';
 import { PaymentController } from './payment.controller';
 import { PaymentService, PaymentWebhookService } from './services';
 import {
@@ -17,7 +19,12 @@ import {
     FlutterwaveStrategy,
     CoinbaseStrategy,
   ],
-  imports: [FlutterwaveModule, CoinbaseModule],
+  imports: [
+    FlutterwaveModule,
+    CoinbaseModule,
+    QueueManagerModule,
+    AccountModule,
+  ],
   controllers: [PaymentController],
   exports: [PaymentService],
 })

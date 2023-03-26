@@ -10,17 +10,23 @@ import { AppLoggerService } from 'src/app_logger';
 import { applicationConfig } from 'src/config';
 import { subscriptionPlanConfig } from 'src/constants';
 import { FlutterwaveService } from 'src/flutterwave';
+import { DeleteBeneficiariesResponse } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
 import { getDifferenceInSecondsTillNow } from 'src/utils';
 import { SECONDS_IN_A_DAY } from '../constants';
 import { generateTransactionRef } from '../utils';
 import { BaseStrategy } from './base_strategy.strategy';
 import {
+  AddTransferBeneficiariesArgs,
+  AddTransferBeneficiariesResponse,
+  DeleteTransferBeneficiariesArgs,
   FetchBanksArgs,
   FetchBanksResponse,
   InitiatePaymentArgs,
   InitiatePaymentResponse,
   PaymentStrategyInterface,
+  ResolveAccountNumberArgs,
+  ResolveAccountNumberResponse,
   UseWebhookArgs,
 } from './interfaces';
 
@@ -94,6 +100,31 @@ export class FlutterwaveStrategy
   async getBankList(args: FetchBanksArgs): Promise<FetchBanksResponse> {
     const { country } = args;
     return this.flutterwaveService.getBanks(country);
+  }
+
+  async resolveBankAccountNumber(
+    args: ResolveAccountNumberArgs,
+  ): Promise<ResolveAccountNumberResponse> {
+    const { accountNumber, bankCode } = args;
+    return this.flutterwaveService.resolveBankAccount(accountNumber, bankCode);
+  }
+
+  async addTransferBeneficiaries(
+    args: AddTransferBeneficiariesArgs,
+  ): Promise<AddTransferBeneficiariesResponse> {
+    const { accountNumber, bankCode, beneficiaryName } = args;
+    return this.flutterwaveService.addTransferBeneficiaries(
+      bankCode,
+      accountNumber,
+      beneficiaryName,
+    );
+  }
+
+  async deleteTransferBeneficiaries(
+    args: DeleteTransferBeneficiariesArgs,
+  ): Promise<DeleteBeneficiariesResponse> {
+    const { beneficiaryId } = args;
+    return this.flutterwaveService.deleteTransferBeneficiaries(beneficiaryId);
   }
 
   async useWebhook(args: UseWebhookArgs): Promise<void> {

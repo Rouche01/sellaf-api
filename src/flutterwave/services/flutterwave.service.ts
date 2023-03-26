@@ -4,6 +4,7 @@ import { firstValueFrom, lastValueFrom } from 'rxjs';
 import { AppLoggerService } from 'src/app_logger';
 import {
   AddBeneficiariesResponse,
+  DeleteBeneficiariesResponse,
   FlwBank,
   ResolveAccountResponse,
 } from 'src/interfaces';
@@ -52,7 +53,22 @@ export class FlutterwaveService {
         accountName: response.data.data.account_name,
       };
     } catch (err) {
-      console.log(err?.response);
+      this.logger.error(err?.response?.data || err?.message);
+      throw err;
+    }
+  }
+
+  async deleteTransferBeneficiaries(beneficiaryId: number) {
+    try {
+      const response = await lastValueFrom(
+        this.httpService
+          .delete<DeleteBeneficiariesResponse>(
+            `/beneficiaries/${beneficiaryId}`,
+          )
+          .pipe(),
+      );
+      return response.data;
+    } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
       throw err;
     }
@@ -82,6 +98,7 @@ export class FlutterwaveService {
         bankName: response.data.data.bank_name,
       };
     } catch (err) {
+      console.log(err.response);
       this.logger.error(err?.response?.data || err?.message);
       throw err;
     }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   Inject,
@@ -22,6 +23,8 @@ import {
   AddBankDto,
   AddBankQueryDto,
   ConfirmBankAccountDto,
+  DeleteBankDto,
+  DeleteBankQueryDto,
   GetBanksQueryDto,
   VerifyTransactionQueryDto,
   WebhookDto,
@@ -64,7 +67,10 @@ export class PaymentController {
     accountNumber: string;
     accountName: string;
   }> {
-    return this.paymentService.confirmAccountNumber(dto);
+    return this.paymentService.confirmAccountNumber(
+      dto,
+      this.appConfig.fiatPaymentGateway as PaymentProcessor,
+    );
   }
 
   @Post('/bank/add')
@@ -74,7 +80,27 @@ export class PaymentController {
     @Query() query: AddBankQueryDto,
     @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
   ): Promise<{ status: string; message: string }> {
-    return this.paymentService.addBankAccount(dto, query, user);
+    return this.paymentService.addBankAccount(
+      dto,
+      query,
+      user,
+      this.appConfig.fiatPaymentGateway as PaymentProcessor,
+    );
+  }
+
+  @Delete('/bank/remove')
+  @Roles({ roles: ['realm:seller-admin', 'realm:affiliate'] })
+  async removePayoutBank(
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+    @Body() dto: DeleteBankDto,
+    @Query() query: DeleteBankQueryDto,
+  ) {
+    return this.paymentService.removeBankAccount(
+      user,
+      dto,
+      query,
+      this.appConfig.fiatPaymentGateway as PaymentProcessor,
+    );
   }
 
   @Get('transactions/verify')

@@ -5,3 +5,5 @@ export { FlwBank } from './flw_bank.interface';
 export { ResolveAccountResponse } from './resolve_account_response.interface';
 export { AddBeneficiariesResponse } from './add_beneficiaries_response.interface';
 export { TransformedUser } from './transformed_user.interface';
+export { ROLES, Role } from './roles.interface';
+export { DeleteBeneficiariesResponse } from './delete_beneficiaries_response.interface';

@@ -1,32 +1,34 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import {
   Transaction,
   TransactionStatus,
   PaymentProcessor,
 } from '@prisma/client';
+import { KeycloakUserService } from 'src/account';
 import { AppLoggerService } from 'src/app_logger';
 import { FlutterwaveService } from 'src/flutterwave';
 import { FlwPaymentSubscription } from 'src/flutterwave/interfaces';
-import { AuthenticatedUser, Country, FlwBank } from 'src/interfaces';
+import { AuthenticatedUser, Country, FlwBank, ROLES } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
+import { checkUserRole } from 'src/utils';
 import {
   AddBankDto,
   AddBankQueryDto,
   ConfirmBankAccountDto,
+  DeleteBankDto,
+  DeleteBankQueryDto,
   VerifyTransactionQueryDto,
 } from '../dtos';
 import {
-  CreateBankDetailsPayload,
   CreateNewTransactionPayload,
   HandlePaymentArgs,
   TransactionWithSubscription,
 } from '../interfaces';
-import { CoinbaseStrategy, FlutterwaveStrategy } from '../strategy';
+import {
+  AddTransferBeneficiariesResponse,
+  CoinbaseStrategy,
+  FlutterwaveStrategy,
+} from '../strategy';
 import { PaymentContext } from '../strategy';
 
 @Injectable()
@@ -38,6 +40,7 @@ export class PaymentService {
     private readonly flutterwaveStrategy: FlutterwaveStrategy,
     private readonly coinbaseStrategy: CoinbaseStrategy,
     private readonly paymentContext: PaymentContext,
+    private readonly keycloakUserService: KeycloakUserService,
   ) {}
 
   async getBankList(
@@ -50,69 +53,103 @@ export class PaymentService {
     }
   }
 
-  async confirmAccountNumber(dto: ConfirmBankAccountDto) {
-    return this.flutterwaveService.resolveBankAccount(
-      dto.accountNumber,
-      dto.bankCode,
+  async confirmAccountNumber(
+    dto: ConfirmBankAccountDto,
+    paymentProcessor: PaymentProcessor,
+  ) {
+    if (paymentProcessor === PaymentProcessor.FLUTTERWAVE) {
+      this.paymentContext.setStrategy(this.flutterwaveStrategy);
+      return this.paymentContext.resolveBankAccountNumber({
+        accountNumber: dto.accountNumber,
+        bankCode: dto.bankCode,
+      });
+    }
+  }
+
+  async removeBankAccount(
+    user: AuthenticatedUser,
+    dto: DeleteBankDto,
+    query: DeleteBankQueryDto,
+    paymentProcessor: PaymentProcessor,
+  ) {
+    const { beneficiaryId, password } = dto;
+    const { storeId } = query;
+
+    await this.keycloakUserService.loginKeycloakUser(
+      user.preferred_username,
+      password,
     );
+
+    if (paymentProcessor === PaymentProcessor.FLUTTERWAVE) {
+      this.paymentContext.setStrategy(this.flutterwaveStrategy);
+      await this.paymentContext.deleteTransferBeneficiaries({
+        beneficiaryId,
+      });
+    }
+
+    try {
+      if (checkUserRole(ROLES['SELLER-ADMIN'], user)) {
+        // TO-DO: Add bank information for a store owned by the seller
+        console.log(storeId);
+      }
+      if (checkUserRole(ROLES.AFFILIATE, user)) {
+        console.log('in affiliate');
+        await this.prismaService.bank.delete({
+          where: { affiliateId: user.affiliateId },
+        });
+      }
+    } catch (err) {
+      this.logger.error(err?.response?.data || err?.message);
+      throw err;
+    }
+    return { status: 'success', message: 'Bank account information deleted.' };
   }
 
   async addBankAccount(
     dto: AddBankDto,
     query: AddBankQueryDto,
     user: AuthenticatedUser,
+    paymentProcessor: PaymentProcessor,
   ): Promise<{ status: string; message: string }> {
-    const { bankCode, accountNumber, beneficiaryName, accountName } = dto;
-    const { applyTo, id } = query;
-    const beneficiaryResp =
-      await this.flutterwaveService.addTransferBeneficiaries(
-        bankCode,
-        accountNumber,
-        beneficiaryName,
-      );
+    const { bankCode, accountNumber, beneficiaryName } = dto;
+    const { storeId } = query;
+    let beneficiaryResponse: AddTransferBeneficiariesResponse;
 
-    const bankUpdateData = {
-      accountNumber: beneficiaryResp.accountNumber,
-      bankCode: beneficiaryResp.bankCode,
-      bankName: beneficiaryResp.bankName,
-      beneficiaryId: beneficiaryResp.id,
-      accountName,
+    if (paymentProcessor === PaymentProcessor.FLUTTERWAVE) {
+      this.paymentContext.setStrategy(this.flutterwaveStrategy);
+      beneficiaryResponse = await this.paymentContext.addTransferBeneficiaries({
+        accountNumber,
+        bankCode,
+        beneficiaryName,
+      });
+    }
+
+    const bankCreateData = {
+      accountNumber: beneficiaryResponse.accountNumber,
+      bankCode: beneficiaryResponse.bankCode,
+      bankName: beneficiaryResponse.bankName,
+      beneficiaryId: beneficiaryResponse.id,
+      accountName: beneficiaryName,
     };
 
     try {
-      if (applyTo === 'store') {
-        const store = await this.prismaService.store.findFirst({
-          where: { id, owner: { id: user.sellerId } },
-        });
-
-        if (!store) {
-          throw new NotFoundException('Store does not exist');
-        }
-
-        await this._createBankDetails({ ...bankUpdateData, storeId: store.id });
+      if (checkUserRole(ROLES['SELLER-ADMIN'], user)) {
+        // TO-DO: Add bank information for a store owned by the seller
+        console.log(storeId);
       }
-
-      if (applyTo === 'affiliate') {
-        const affiliate = await this.prismaService.affiliate.findFirst({
-          where: { id, user: { id: user.id } },
-        });
-
-        if (!affiliate) {
-          throw new NotFoundException('Affiliate does not exist');
-        }
-
-        await this._createBankDetails({
-          ...bankUpdateData,
-          affiliateId: affiliate.id,
+      if (checkUserRole(ROLES.AFFILIATE, user)) {
+        await this.prismaService.bank.create({
+          data: {
+            ...bankCreateData,
+            affiliateId: user.affiliateId,
+          },
         });
       }
 
       return { status: 'success', message: 'Bank account added successfully' };
     } catch (err) {
       this.logger.error(err?.response?.data || err?.message);
-      throw new InternalServerErrorException(
-        err?.message || 'Something went wrong',
-      );
+      throw err;
     }
   }
 
@@ -254,13 +291,5 @@ export class PaymentService {
         data: { active: true, willRenew: true },
       });
     }
-  }
-
-  private async _createBankDetails(
-    bankDetailsPayload: CreateBankDetailsPayload,
-  ) {
-    await this.prismaService.bank.create({
-      data: { ...bankDetailsPayload },
-    });
   }
 }
