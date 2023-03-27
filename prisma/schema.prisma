@@ -60,6 +60,11 @@ enum PaymentProcessor {
   COINBASE
 }
 
+enum AuditLogActionType {
+  DELETE
+  UPDATE
+}
+
 model UserRole {
   userId Int
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -88,6 +93,7 @@ model User {
   confirmationToken     ConfirmationToken[]
   initiatedTransactions Transaction[]       @relation("InitiatedTransactions")
   referredTransactions  Transaction[]       @relation("ReferredTransactions")
+  actionLogs            AuditLog[]
 
   @@map("user")
 }
@@ -271,4 +277,15 @@ model Bank {
   store   Store? @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@map("bank")
+}
+
+model AuditLog {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  action AuditLogActionType @default(DELETE)
+  content Json
+
+  actorId Int?
+  actor User? @relation(fields: [actorId], references: [id])
 }
