@@ -65,6 +65,12 @@ enum AuditLogActionType {
   UPDATE
 }
 
+// list of records where historical data is saved
+enum AuditLogRecordType {
+  USER
+  STORE
+}
+
 model UserRole {
   userId Int
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -280,12 +286,13 @@ model Bank {
 }
 
 model AuditLog {
-  id Int @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
 
-  action AuditLogActionType @default(DELETE)
+  action  AuditLogActionType @default(DELETE)
   content Json
+  record  AuditLogRecordType
 
   actorId Int?
-  actor User? @relation(fields: [actorId], references: [id])
+  actor   User? @relation(fields: [actorId], references: [id])
 }
