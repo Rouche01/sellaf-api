@@ -219,6 +219,10 @@ export class KeycloakUserService {
       this.logger.log(`Reset password for user ${kcUserId}`);
     } catch (err) {
       this.logger.log(err?.response?.data || err?.message);
+      // TO-DO: Write a util function to resolve keycloak error message
+      if (err?.response?.data?.error_description) {
+        throw new BadRequestException(err.response.data.error_description);
+      }
       throw new InternalServerErrorException(
         err?.message || 'Unable to reset password for keycloak user',
       );

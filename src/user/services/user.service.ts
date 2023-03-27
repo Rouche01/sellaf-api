@@ -1,12 +1,23 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import { KeycloakUserService } from 'src/account';
 import { AppLoggerService } from 'src/app_logger';
-import { AuthenticatedUser, TransformedUser } from 'src/interfaces';
+import { applicationConfig } from 'src/config';
+import { QUEUES } from 'src/constants';
+import {
+  AuthenticatedUser,
+  EMAIL_TEMPLATES,
+  PasswordUpdatedTemplateContext,
+  TransformedUser,
+} from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
+import { QueueManagerService, SendEmailJobData } from 'src/queue_manager';
+import { UpdateUserPasswordDto } from '../dtos';
 import { GetAffiliateReferralsQueryDto } from '../dtos/get_affiliate_referrals_query.dto';
 import { EditUserInfoPayload } from '../interfaces';
 import { transformUserResponse } from '../utils';
@@ -17,6 +28,9 @@ export class UserService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly keycloakUserService: KeycloakUserService,
+    private readonly queueManagerService: QueueManagerService,
+    @Inject(applicationConfig.KEY)
+    private readonly appConfig: ConfigType<typeof applicationConfig>,
   ) {}
   async fetchAffiliateReferredUsers(
     affiliateId: number,
@@ -148,5 +162,44 @@ export class UserService {
       );
       throw err;
     }
+  }
+
+  async updateUserPassword(userId: number, dto: UpdateUserPasswordDto) {
+    const userToEdit = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!userToEdit) {
+      throw new NotFoundException('User not found');
+    }
+    // make sure that supplied password is correct
+    await this.keycloakUserService.loginKeycloakUser(
+      userToEdit.username,
+      dto.currentPassword,
+    );
+
+    await this.keycloakUserService.resetUserPassword(
+      dto.newPassword,
+      userToEdit.keycloakUserId,
+    );
+    await this.queueManagerService.addJob<
+      SendEmailJobData<PasswordUpdatedTemplateContext>
+    >({
+      jobId: userToEdit.id.toString(),
+      jobName: 'Password Updated Email Job',
+      queueName: QUEUES.SEND_EMAIL_QUEUE,
+      data: {
+        contextObj: {
+          data: {
+            firstName: userToEdit.firstName,
+            userAccount: `${this.appConfig.frontendUrl}/profile`,
+          },
+        },
+        recepient: userToEdit.email,
+        subject: 'Password updated',
+        template: EMAIL_TEMPLATES.PASSWORD_CHANGED,
+      },
+    });
+    return { status: 'success', message: 'Password updated successfully.' };
   }
 }

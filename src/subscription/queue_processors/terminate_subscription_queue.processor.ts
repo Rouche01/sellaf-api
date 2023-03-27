@@ -3,7 +3,8 @@ import { Inject } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { Job } from 'bullmq';
 import { applicationConfig } from 'src/config';
-import { TERMINATE_SUBSCRIPTION_QUEUE } from 'src/constants';
+import { QUEUES, TERMINATE_SUBSCRIPTION_QUEUE } from 'src/constants';
+import { EMAIL_TEMPLATES } from 'src/interfaces';
 import {
   QueueManagerService,
   SendEmailJobData,
@@ -32,11 +33,11 @@ export class TerminateSubscriptionConsumer extends WorkerHost {
     >({
       jobName: 'Send Renew Subscription Email',
       jobId: subscription.id.toString(),
-      queueName: 'SEND_EMAIL',
+      queueName: QUEUES.SEND_EMAIL_QUEUE,
       data: {
         recepient: userEmail,
         subject: 'Affiliate Subscription Expired',
-        template: 'subscription_expired',
+        template: EMAIL_TEMPLATES.SUBSCRIPTION_EXPIRED,
         contextObj: {
           subscriptionExpired: {
             renewLink: `${this.appConfig.frontendUrl}/overview`,

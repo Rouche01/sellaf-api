@@ -6,11 +6,7 @@ import {
 } from '@nestjs/common';
 import add from 'date-fns/add';
 import { EmailService } from 'src/email';
-import {
-  PasswordUpdatedContext,
-  SellerConfirmationContext,
-  UserGroups,
-} from '../interfaces';
+import { SellerConfirmationContext, UserGroups } from '../interfaces';
 import { PrismaService } from 'src/prisma';
 import {
   constructVerificationLink,
@@ -39,7 +35,10 @@ import { AppLoggerService } from 'src/app_logger';
 
 import { ConfigType } from '@nestjs/config';
 import { ResetTokenContext } from '../interfaces/reset_token_context.interface';
-import { AuthenticatedUser } from 'src/interfaces';
+import {
+  AuthenticatedUser,
+  PasswordUpdatedTemplateContext,
+} from 'src/interfaces';
 import { transformUserResponse } from '../utils/transform_user_response.util';
 import { Affiliate } from '@prisma/client';
 
@@ -459,12 +458,12 @@ export class AccountService {
 
       await this.keycloakUserService.resetUserPassword(dto.password, user.sub);
       // TO-DO: Send email on successful password reset
-      await this.emailService.addEmailJob<PasswordUpdatedContext>({
+      await this.emailService.addEmailJob<PasswordUpdatedTemplateContext>({
         template: 'password_changed',
         contextObj: {
-          passwordUpdated: {
+          data: {
             firstName: user.given_name,
-            userAccount: 'http://localhost:3000/profile',
+            userAccount: `${this.appConfig.frontendUrl}/profile`,
           },
         },
         recepient: user.email,

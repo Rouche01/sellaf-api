@@ -4,6 +4,7 @@ import { Currency, PaymentProcessor, TransactionStatus } from '@prisma/client';
 import { AppLoggerService } from 'src/app_logger';
 import { CoinbaseService } from 'src/coinbase';
 import { applicationConfig } from 'src/config';
+import { QUEUES } from 'src/constants';
 import { PrismaService } from 'src/prisma';
 import {
   TerminateSubscriptionJobData,
@@ -172,7 +173,7 @@ export class CoinbaseStrategy
         jobDelay: getDifferenceInMsFromNow(transaction.subscription.endDate),
         jobId: transaction.subscriptionId.toString(),
         jobName: 'Terminate Subscription',
-        queueName: 'TERMINATE_SUBSCRIPTION_QUEUE',
+        queueName: QUEUES.TERMINATE_SUBSCRIPTION_QUEUE,
       });
     }
   }

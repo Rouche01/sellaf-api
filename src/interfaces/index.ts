@@ -7,3 +7,5 @@ export { AddBeneficiariesResponse } from './add_beneficiaries_response.interface
 export { TransformedUser } from './transformed_user.interface';
 export { ROLES, Role } from './roles.interface';
 export { DeleteBeneficiariesResponse } from './delete_beneficiaries_response.interface';
+export { PasswordUpdatedTemplateContext } from './email_template_context.interface';
+export { EMAIL_TEMPLATES, EmailTemplate } from './email_templates.interface';

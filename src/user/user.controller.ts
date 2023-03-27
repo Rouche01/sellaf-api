@@ -19,9 +19,9 @@ import {
   EditUserDto,
   EditUserQueryDto,
   GetAffiliateReferralsQueryDto,
+  EditUserEmailDto,
+  UpdateUserPasswordDto,
 } from './dtos';
-import { EditUserEmailDto } from './dtos/edit_user.dto';
-
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -74,5 +74,14 @@ export class UserController {
         userId,
       );
     }
+  }
+
+  @Roles({ roles: ['realm:affiliate'] })
+  @Patch(':id/password')
+  async updateUserPassword(
+    @Body() dto: UpdateUserPasswordDto,
+    @Param('id', ParseIntPipe) userId: number,
+  ) {
+    return this.userService.updateUserPassword(userId, dto);
   }
 }
