@@ -62,7 +62,7 @@ enum PaymentProcessor {
 
 model UserRole {
   userId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   role Role
 
@@ -104,7 +104,7 @@ model Seller {
   totalEarning Decimal @default(0) @db.Decimal(25, 2)
 
   userId Int     @unique
-  user   User    @relation(fields: [userId], references: [id])
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   stores Store[]
 
   @@map("seller")
@@ -126,7 +126,7 @@ model Affiliate {
   bankDetails Bank?
 
   userId Int  @unique
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   referredUsers Affiliate[] @relation("ReferredAffiliates")
 
@@ -147,7 +147,7 @@ model ConfirmationToken {
   token     String
 
   userId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("confirmation_token")
 }
@@ -167,7 +167,7 @@ model Store {
   bankDetails Bank?
 
   sellerId     Int
-  owner        Seller        @relation(fields: [sellerId], references: [id])
+  owner        Seller        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   products     Product[]
   transactions Transaction[]
 
@@ -187,8 +187,9 @@ model Transaction {
   address             String?
   amount              Decimal                    @db.Decimal(15, 2)
 
-  initiatedBy     Int
-  initiatedByUser User @relation("InitiatedTransactions", fields: [initiatedBy], references: [id])
+  // optional because user who initiated transaction can delete his/her account
+  initiatedBy     Int?
+  initiatedByUser User? @relation("InitiatedTransactions", fields: [initiatedBy], references: [id])
 
   referredBy     Int?
   referredByUser User? @relation("ReferredTransactions", fields: [referredBy], references: [id])
@@ -227,7 +228,7 @@ model Product {
   name String
 
   storeId      Int
-  store        Store         @relation(fields: [storeId], references: [id])
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
   @@map("product")
@@ -243,8 +244,9 @@ model Subscription {
   active    Boolean  @default(false)
   willRenew Boolean  @default(false)
 
-  affiliateId Int       @unique
-  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  // optional because affiliate who created subscription can delete account
+  affiliateId Int?       @unique
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
 
   activeTransactionId Int?         @unique
   activeTransaction   Transaction? @relation("ActiveTransaction", fields: [activeTransactionId], references: [id])
@@ -263,10 +265,10 @@ model Bank {
   beneficiaryId Int
 
   affiliateId Int?       @unique
-  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
 
   storeId Int?   @unique
-  store   Store? @relation(fields: [storeId], references: [id])
+  store   Store? @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@map("bank")
 }
