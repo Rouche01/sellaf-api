@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
+import { AuditLogRecordType } from '@prisma/client';
 import { KeycloakUserService } from 'src/account';
 import { AppLoggerService } from 'src/app_logger';
 import { applicationConfig } from 'src/config';
@@ -13,10 +14,12 @@ import {
   AuthenticatedUser,
   EMAIL_TEMPLATES,
   PasswordUpdatedTemplateContext,
+  ROLES,
   TransformedUser,
 } from 'src/interfaces';
 import { PrismaService } from 'src/prisma';
 import { QueueManagerService, SendEmailJobData } from 'src/queue_manager';
+import { checkUserRole } from 'src/utils';
 import { UpdateUserPasswordDto } from '../dtos';
 import { GetAffiliateReferralsQueryDto } from '../dtos/get_affiliate_referrals_query.dto';
 import { EditUserInfoPayload } from '../interfaces';
@@ -201,5 +204,58 @@ export class UserService {
       },
     });
     return { status: 'success', message: 'Password updated successfully.' };
+  }
+
+  async deleteUserAccount(
+    userId: number,
+    password: string,
+    user: AuthenticatedUser,
+  ) {
+    const userToDelete = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: {
+        ...(checkUserRole(ROLES.AFFILIATE, user) && { affiliate: true }),
+        ...(checkUserRole(ROLES['SELLER-ADMIN'], user) && {
+          seller: {
+            include: {
+              stores: {
+                include: {
+                  products: true,
+                },
+              },
+            },
+          },
+        }),
+        userRoles: true,
+      },
+    });
+
+    if (!userToDelete) {
+      throw new NotFoundException('User not found');
+    }
+
+    const stringifiedUserData = JSON.stringify(userToDelete);
+    await this.keycloakUserService.loginKeycloakUser(
+      userToDelete.username,
+      password,
+    );
+
+    await this.prismaService.$transaction([
+      this.prismaService.user.delete({ where: { id: userId } }),
+      this.prismaService.auditLog.create({
+        data: { content: stringifiedUserData, record: AuditLogRecordType.USER },
+      }),
+    ]);
+
+    // TO-DO: Stop active subscription and disable renewal of subscription for affiliate
+
+    await this.keycloakUserService.logoutKeycloakUser(
+      userToDelete.keycloakUserId,
+    );
+    await this.keycloakUserService.deleteKeycloakUser(
+      userToDelete.keycloakUserId,
+    );
+
+    return { status: 'success', message: 'User account deleted successfully.' };
   }
 }

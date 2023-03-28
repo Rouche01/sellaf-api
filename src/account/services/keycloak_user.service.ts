@@ -228,4 +228,50 @@ export class KeycloakUserService {
       );
     }
   }
+
+  async deleteKeycloakUser(kcUserId: string) {
+    const deleteUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users/${kcUserId}`;
+    const adminAccessToken = await this.getKeycloakAdminAccessToken();
+
+    try {
+      await lastValueFrom(
+        this.httpService
+          .delete(deleteUserUrl, {
+            headers: { Authorization: `Bearer ${adminAccessToken}` },
+          })
+          .pipe(),
+      );
+
+      this.logger.log(`Deleted keycloak user ${kcUserId}`);
+    } catch (err) {
+      this.logger.log(err?.response?.data || err?.message);
+      throw new InternalServerErrorException(
+        err?.message || 'Unable to delete keycloak user',
+      );
+    }
+  }
+
+  async logoutKeycloakUser(kcUserId: string) {
+    const logoutUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users/${kcUserId}/logout`;
+    const adminAccessToken = await this.getKeycloakAdminAccessToken();
+
+    try {
+      await lastValueFrom(
+        this.httpService
+          .post(
+            logoutUserUrl,
+            {},
+            { headers: { Authorization: `Bearer ${adminAccessToken}` } },
+          )
+          .pipe(),
+      );
+
+      this.logger.log(`Logged keycloak user ${kcUserId} out`);
+    } catch (err) {
+      this.logger.log('err?.response?.data || err?.message');
+      throw new InternalServerErrorException(
+        err?.message || 'Unable to logout keycloak user',
+      );
+    }
+  }
 }

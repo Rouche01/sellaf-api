@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -21,6 +22,7 @@ import {
   GetAffiliateReferralsQueryDto,
   EditUserEmailDto,
   UpdateUserPasswordDto,
+  DeleteUserDto,
 } from './dtos';
 @Controller('user')
 export class UserController {
@@ -83,5 +85,15 @@ export class UserController {
     @Param('id', ParseIntPipe) userId: number,
   ) {
     return this.userService.updateUserPassword(userId, dto);
+  }
+
+  @Roles({ roles: ['realm:affiliate'] })
+  @Delete(':id')
+  async deleteUserAccount(
+    @Param('id', ParseIntPipe) userId: number,
+    @Body() dto: DeleteUserDto,
+    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
+  ) {
+    return this.userService.deleteUserAccount(userId, dto.password, user);
   }
 }

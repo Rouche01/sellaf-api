@@ -2,3 +2,4 @@ export { GetAffiliateReferralsQueryDto } from './get_affiliate_referrals_query.d
 export { EditUserQueryDto } from './edit_user_query.dto';
 export { EditUserDto, EditUserEmailDto } from './edit_user.dto';
 export { UpdateUserPasswordDto } from './update_user_password.dto';
+export { DeleteUserDto } from './delete_user.dto';
