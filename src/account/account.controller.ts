@@ -101,19 +101,15 @@ export class AccountController {
     return { accessToken, refreshToken };
   }
 
+  @Public()
   @Post('password/reset/get')
-  async resetPassword(
-    @Body() dto: ResetPasswordDto,
-    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
-  ) {
-    return this.accountService.sendResetPasswordToken(dto, user);
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.accountService.sendResetPasswordToken(dto);
   }
 
+  @Public()
   @Post('password/reset/confirm')
-  async resetPasswordConfirm(
-    @Body() dto: ResetPasswordConfirmDto,
-    @AuthenticatedUser(new AuthUserPipe()) user: AuthenticatedUserType,
-  ) {
-    return this.accountService.confirmPasswordReset(dto, user);
+  async resetPasswordConfirm(@Body() dto: ResetPasswordConfirmDto) {
+    return this.accountService.confirmPasswordReset(dto);
   }
 }

@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import add from 'date-fns/add';
 import { EmailService } from 'src/email';
 import { SellerConfirmationContext, UserGroups } from '../interfaces';
@@ -377,11 +372,7 @@ export class AccountService {
 
   async sendResetPasswordToken(
     dto: ResetPasswordDto,
-    user: AuthenticatedUser,
-  ): Promise<{ message: string }> {
-    if (user.email !== dto.email) {
-      throw new UnauthorizedException('Unauthorized to perform this action');
-    }
+  ): Promise<{ status: string; message: string }> {
     try {
       const user = await this.prismaService.user.findUnique({
         where: { email: dto.email },
@@ -421,33 +412,40 @@ export class AccountService {
         emailJobSuccess: !!emailJobResp.failedReason,
         failedReason: emailJobResp.failedReason,
       });
-      return { message: 'Password reset token has been sent to your email' };
+      return {
+        status: 'success',
+        message: 'Password reset token has been sent to your email',
+      };
     } catch (err) {
       this.logger.error(err?.message || 'Something went wrong');
       throw err;
     }
   }
 
-  async confirmPasswordReset(
-    dto: ResetPasswordConfirmDto,
-    user: AuthenticatedUser,
-  ) {
+  async confirmPasswordReset(dto: ResetPasswordConfirmDto) {
+    const { email, password, token: inputToken } = dto;
     try {
-      const token = await this.prismaService.confirmationToken.findFirst({
-        where: { userId: user.id },
+      const token = await this.prismaService.confirmationToken.findMany({
+        where: { user: { email } },
+        include: { user: true },
+        take: -1,
       });
+
+      const user = token[0].user;
+
+      console.log(token, user);
 
       if (!token) {
         throw new BadRequestException('Token expired, request for a new one');
       }
 
-      if (isTokenExpired(token)) {
+      if (isTokenExpired(token[0])) {
         throw new BadRequestException('Token expired, request for a new one');
       }
 
       const tokenIsValid = await verifyConfirmationToken(
-        dto.token,
-        token.token,
+        inputToken,
+        token[0].token,
       );
 
       if (!tokenIsValid) {
@@ -456,20 +454,23 @@ export class AccountService {
         );
       }
 
-      await this.keycloakUserService.resetUserPassword(dto.password, user.sub);
+      await this.keycloakUserService.resetUserPassword(
+        password,
+        user.keycloakUserId,
+      );
       // TO-DO: Send email on successful password reset
       await this.emailService.addEmailJob<PasswordUpdatedTemplateContext>({
         template: 'password_changed',
         contextObj: {
           data: {
-            firstName: user.given_name,
+            firstName: user.firstName,
             userAccount: `${this.appConfig.frontendUrl}/profile`,
           },
         },
         recepient: user.email,
         subject: 'Your password has been changed',
       });
-      return { message: 'Password reset successful' };
+      return { status: 'success', message: 'Password reset successful' };
     } catch (err) {
       this.logger.error(err?.message || 'Unable to reset password');
       throw err;
