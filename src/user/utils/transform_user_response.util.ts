@@ -27,8 +27,12 @@ export const transformUserResponse = (user: UserResponse) => {
     lastName: user.lastName,
     userName: user.username,
     keycloakUserId: user.keycloakUserId,
-    phoneNumber: user?.affiliate.phoneNumber || user?.seller.phoneNumber,
-    verified: user.affiliate ? user.affiliate.active : user.seller?.active,
+    phoneNumber: user?.affiliate?.phoneNumber || user?.seller?.phoneNumber,
+    verified: user?.affiliate
+      ? user.affiliate.active
+      : user?.seller
+      ? user.seller.active
+      : true,
     roles,
     ...(user.affiliate && {
       affiliateCode: user.affiliate.affiliateCode,

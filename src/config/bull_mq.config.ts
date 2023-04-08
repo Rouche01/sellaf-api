@@ -11,6 +11,6 @@ export const bullMqConfig: QueueOptions = {
     attempts: 3,
     backoff: { type: 'exponential', delay: 300 },
     // removeOnComplete: true,
-    removeOnFail: true,
+    // removeOnFail: true,
   },
 };

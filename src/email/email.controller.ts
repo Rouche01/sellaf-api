@@ -13,7 +13,7 @@ export class EmailController {
     await this.emailService.addEmailJob<ResetTokenContext>({
       template: 'reset_token',
       contextObj: { resetToken: { code: '4567' } },
-      recepient: 'legitrouche@gmail.com',
+      recepient: 'vviprichard@gmail.com',
       subject: 'Reset password instructions',
     });
 

@@ -15,3 +15,4 @@ export {
   setRefreshTokenCookie,
 } from './cookies.util';
 export { constructVerificationLink } from './construct_verification_link.util';
+export { generateUniquePassword } from './generate_uniq_password.util';

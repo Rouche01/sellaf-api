@@ -15,6 +15,7 @@ import { applicationConfig } from 'src/config';
             user: appConfig.smtpUsername,
             pass: appConfig.smtpPassword,
           },
+          // port: 465,
         },
         template: {
           dir: join(__dirname, '../mails'),

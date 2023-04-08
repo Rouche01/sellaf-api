@@ -64,6 +64,7 @@ export class KeycloakUserService {
     emailVerified = false,
     userAttrs,
   }: CreateKeycloakUser): Promise<string> {
+    console.log(userData, 'inside createKeycloakUser fn');
     const createUserUrl = `${this.appConfig.keycloakServer}/admin/realms/${this.appConfig.keycloakServerRealmName}/users`;
 
     const adminAccessToken = await this.getKeycloakAdminAccessToken();

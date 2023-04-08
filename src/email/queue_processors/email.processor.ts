@@ -11,8 +11,9 @@ export class EmailConsumer extends WorkerHost {
   }
 
   async process(job: Job<SendEmailJobData>): Promise<void> {
+    console.log('in here');
     await this.mailerService.sendMail({
-      from: '"Sellaf Africa" <noreply@adverts247.com>',
+      from: '"Sellaf Africa" <admin@sellaf.africa>',
       to: job.data.recepient,
       subject: job.data.subject,
       template: job.data.template,

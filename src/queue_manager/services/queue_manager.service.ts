@@ -43,6 +43,7 @@ export class QueueManagerService {
   }
 
   async addJob<T>(addJobArgs: AddJobArgs<T>): Promise<Job<T>> {
+    console.log('inside add job');
     const { data, jobDelay, jobId, jobName, queueName } = addJobArgs;
     const queue = this._selectQueue(queueName);
     return queue.add(`${jobName}-${jobId}`, data, {

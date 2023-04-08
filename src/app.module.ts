@@ -20,6 +20,7 @@ import { UserModule } from './user';
 import { SubscriptionModule } from './subscription';
 import { CoinbaseModule } from './coinbase';
 import { QueueManagerModule } from './queue_manager';
+import { EmailModule } from './email';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { QueueManagerModule } from './queue_manager';
     SubscriptionModule,
     CoinbaseModule,
     QueueManagerModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

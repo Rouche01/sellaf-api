@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import add from 'date-fns/add';
-import { EmailService } from 'src/email';
 import { SellerConfirmationContext, UserGroups } from '../interfaces';
 import { PrismaService } from 'src/prisma';
 import {
   constructVerificationLink,
   generateAffiliateId,
+  generateUniquePassword,
   generateUniqueUsername,
   isTokenExpired,
 } from 'src/account/utils';
@@ -32,10 +32,13 @@ import { ConfigType } from '@nestjs/config';
 import { ResetTokenContext } from '../interfaces/reset_token_context.interface';
 import {
   AuthenticatedUser,
+  EMAIL_TEMPLATES,
   PasswordUpdatedTemplateContext,
 } from 'src/interfaces';
 import { transformUserResponse } from '../utils/transform_user_response.util';
 import { Affiliate } from '@prisma/client';
+import { QueueManagerService, SendEmailJobData } from 'src/queue_manager';
+import { QUEUES } from 'src/constants';
 
 @Injectable()
 export class AccountService {
@@ -46,7 +49,7 @@ export class AccountService {
     private readonly prismaService: PrismaService,
     @Inject(applicationConfig.KEY)
     private readonly appConfig: ConfigType<typeof applicationConfig>,
-    private readonly emailService?: EmailService,
+    private readonly queueManagerService: QueueManagerService,
   ) {}
 
   async createAffiliateUser(
@@ -111,9 +114,10 @@ export class AccountService {
         },
       });
 
-      const emailJobResp =
-        await this.emailService.addEmailJob<AffiliateRegisterContext>({
-          template: 'affiliate_verification',
+      const emailJobResp = await this.queueManagerService.addJob<
+        SendEmailJobData<AffiliateRegisterContext>
+      >({
+        data: {
           contextObj: {
             affiliateVerification: {
               firstName: dto.firstName,
@@ -127,7 +131,13 @@ export class AccountService {
           },
           recepient: dto.email,
           subject: 'Verify your Email',
-        });
+          template: EMAIL_TEMPLATES.AFFILIATE_VERIFICATION,
+        },
+        jobId: user.id.toString(),
+        jobName: 'Affiliate Verification Email',
+        queueName: QUEUES.SEND_EMAIL_QUEUE,
+      });
+
       this.logger.log({
         emailJobSuccess: !!emailJobResp.failedReason,
         failedReason: emailJobResp.failedReason,
@@ -155,9 +165,18 @@ export class AccountService {
       address: [dto.address],
     };
 
+    let generatedPassword: string;
+
+    if (!dto.password) {
+      generatedPassword = generateUniquePassword();
+    }
+
     try {
       const kcUserId = await this.keycloakUserService.createKeycloakUser({
-        userData: dto,
+        userData: {
+          ...dto,
+          ...(generatedPassword && { password: generatedPassword }),
+        },
         username,
         userGroup,
         userAttrs: keycloakAttrs,
@@ -185,20 +204,26 @@ export class AccountService {
         },
       });
 
-      const emailJobResp =
-        await this.emailService.addEmailJob<SellerConfirmationContext>({
-          template: 'seller_confirmation',
+      const emailJobResp = await this.queueManagerService.addJob<
+        SendEmailJobData<SellerConfirmationContext>
+      >({
+        data: {
           contextObj: {
             seller: {
               firstName: dto.firstName,
               email: dto.email,
-              password: dto.password,
+              password: dto.password || generatedPassword,
               profileLink: `http://localhost:3000/profile`,
             },
           },
           recepient: dto.email,
           subject: 'Seller Account Created',
-        });
+          template: EMAIL_TEMPLATES.SELLER_CONFIRMATION,
+        },
+        jobId: user.id.toString(),
+        jobName: 'Seller Account Confirmation Email',
+        queueName: QUEUES.SEND_EMAIL_QUEUE,
+      });
 
       this.logger.log({
         emailJobSuccess: !!emailJobResp.failedReason,
@@ -401,13 +426,20 @@ export class AccountService {
         }),
       ]);
 
-      const emailJobResp =
-        await this.emailService.addEmailJob<ResetTokenContext>({
-          template: 'reset_token',
+      const emailJobResp = await this.queueManagerService.addJob<
+        SendEmailJobData<ResetTokenContext>
+      >({
+        data: {
           contextObj: { resetToken: { code: resetToken } },
           recepient: user.email,
           subject: 'Reset password instructions',
-        });
+          template: EMAIL_TEMPLATES.RESET_TOKEN,
+        },
+        jobId: user.id.toString(),
+        jobName: 'Password Reset Token Email',
+        queueName: QUEUES.SEND_EMAIL_QUEUE,
+      });
+
       this.logger.log({
         emailJobSuccess: !!emailJobResp.failedReason,
         failedReason: emailJobResp.failedReason,
@@ -458,17 +490,25 @@ export class AccountService {
         password,
         user.keycloakUserId,
       );
+
       // TO-DO: Send email on successful password reset
-      await this.emailService.addEmailJob<PasswordUpdatedTemplateContext>({
-        template: 'password_changed',
-        contextObj: {
-          data: {
-            firstName: user.firstName,
-            userAccount: `${this.appConfig.frontendUrl}/profile`,
+      await this.queueManagerService.addJob<
+        SendEmailJobData<PasswordUpdatedTemplateContext>
+      >({
+        data: {
+          contextObj: {
+            data: {
+              firstName: user.firstName,
+              userAccount: `${this.appConfig.frontendUrl}/profile`,
+            },
           },
+          recepient: user.email,
+          subject: 'Your password has been changed',
+          template: EMAIL_TEMPLATES.PASSWORD_CHANGED,
         },
-        recepient: user.email,
-        subject: 'Your password has been changed',
+        jobId: user.id.toString(),
+        jobName: 'Password Changed Email',
+        queueName: QUEUES.SEND_EMAIL_QUEUE,
       });
       return { status: 'success', message: 'Password reset successful' };
     } catch (err) {
@@ -497,13 +537,14 @@ export class AccountService {
         },
       });
 
-      const emailJobResp =
-        await this.emailService.addEmailJob<AffiliateRegisterContext>({
-          template: 'affiliate_verification',
+      const emailJobResp = await this.queueManagerService.addJob<
+        SendEmailJobData<AffiliateRegisterContext>
+      >({
+        data: {
           contextObj: {
             affiliateVerification: {
-              firstName: user.firstName,
               email: user.email,
+              firstName: user.firstName,
               verificationLink: constructVerificationLink(
                 this.appConfig.frontendUrl,
                 confirmationToken,
@@ -513,7 +554,13 @@ export class AccountService {
           },
           recepient: user.email,
           subject: 'Verify your Email',
-        });
+          template: EMAIL_TEMPLATES.AFFILIATE_VERIFICATION,
+        },
+        jobId: user.id.toString(),
+        jobName: 'Affiliate Verification Email Resend',
+        queueName: QUEUES.SEND_EMAIL_QUEUE,
+      });
+
       this.logger.log({
         emailJobSuccess: !!emailJobResp.failedReason,
         failedReason: emailJobResp.failedReason,
