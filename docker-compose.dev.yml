@@ -14,13 +14,14 @@ services:
       - /usr/src/app/node_modules
     ports:
       - 4005:4005
+      - 9229:9229
     depends_on:
       db-server:
         condition: service_healthy
       redis:
         condition: service_healthy
     platform: "linux/amd64"
-    command: ["/bin/sh", "-c", "/wait-for-pg-and-exec.sh"]
+    command: [ "/bin/sh", "-c", "/wait-for-pg-and-exec.sh" ]
   db-server:
     image: postgres:13-alpine
     ports:
