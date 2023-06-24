@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { Roles } from 'nest-keycloak-connect';
 import { FetchMerchantsQueryDto } from './dto';
 import { MerchantService } from './services';
@@ -11,5 +11,11 @@ export class MerchantController {
   @Roles({ roles: ['realm:super-admin'] })
   async getSellers(@Query() query: FetchMerchantsQueryDto) {
     return this.merchantService.fetchSellers(query);
+  }
+
+  @Get(':id')
+  @Roles({ roles: ['realm:super-admin'] })
+  async fetchSellerById(@Param('id', ParseIntPipe) sellerId: number) {
+    return this.merchantService.fetchUniqueSellerById(sellerId);
   }
 }
